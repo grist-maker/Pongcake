@@ -1,0 +1,211 @@
+003BE114 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 10/15/2022 4:17:14 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Pancake Movement - Pongcake
+00000000                             3  * Written by : Gabrielle Tristani
+00000000                             4  * Date       :
+00000000                             5  * Description: Contains a selection of functions used to govern pancake movement left, right, up, and down based on state.
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  MovingRight:   
+00000000  2EBC 00000002              8      move.l #2,(sp) ;Sets pancake to moving right
+00000006                             9  
+00000006                            10  MovingLeft:
+00000006  0C97 00000000             11      cmp.l #0,(sp)
+0000000C  6600 0008                 12      bne UpOrDown
+00000010  2EBC 00000001             13      move.l #1,(sp) ;Sets pancake to move left, as long as it is not already moving right, then dropping into MoveCake
+00000016                            14      
+00000016                            15  UpOrDown:  
+00000016  4FF9 00FFFF88             16      lea $00FFFF88,sp ;Grabs value indicating whether pancake is going up or down, branching to GoUp if it is moving up, or dropping to GoDown otherwise   
+0000001C  0C97 00000000             17      cmp.l #0,(sp)
+00000022  6600 0090                 18      bne GoUp
+00000026                            19      
+00000026                            20  GoDown:
+00000026  4FF9 00FFFF74             21      lea $00FFFF74,sp
+0000002C  4EB9 000001CA             22      jsr VerticalData
+00000032  4FF9 00FFFF84             23      lea $00FFFF84,sp
+00000038                            24      
+00000038  0C97 00000001             25      cmp.l #1,(sp)
+0000003E  6700 0050                 26      beq LeftDown
+00000042  0C97 00000000             27      cmp.l #0,(sp)
+00000048  6700 0046                 28      beq LeftDown
+0000004C                            29  
+0000004C                            30  SwitchToRightDown:
+0000004C  4FF9 00FFFF84             31      lea $00FFFF84,sp ;Sets pancake to head right and down
+00000052  2EBC 00000002             32      move.l #2,(sp)
+00000058                            33  
+00000058                            34  RightDown:
+00000058  4FF9 00FFFF74             35      lea $00FFFF74,sp
+0000005E  4EB9 00000160             36      jsr MoveDown
+00000064                            37      
+00000064  4FF9 00FFFF9C             38      lea $00FFFF9C,sp
+0000006A  D697                      39      add.l (sp),d3
+0000006C  B6BC 000002BC             40      cmp.l #700,d3 ;But before moving right, we need to ensure that new x < 700 (right wall), and switch to moving left otherwise.
+00000072  6C00 0010                 41      bge SwitchToLeftDown ;We need to go left instead.
+00000076                            42      
+00000076  D397                      43      add.l d1,(sp) ;Adds x velocity to x position value to get new location
+00000078  4FF9 00FFFFC0             44      lea $00FFFFC0,sp ;Jumps to subroutine that will actually draw pancake onscreen
+Line 45 ERROR: Undefined symbol
+0000007E  4EB9 004DBD16             45      jsr DrawTheCake
+00000084                            46  
+00000084                            47  SwitchToLeftDown:
+00000084  4FF9 00FFFF84             48      lea $00FFFF84,sp ;Switches pancake to moving left and downwards if pancake is no longer moving right or up
+0000008A  2EBC 00000001             49      move.l #1,(sp)
+00000090                            50      
+00000090                            51  LeftDown:  
+00000090  4FF9 00FFFF74             52      lea $00FFFF74,sp
+00000096  4EB9 00000160             53      jsr MoveDown
+0000009C                            54      
+0000009C  4FF9 00FFFF9C             55      lea $00FFFF9C,sp
+000000A2  B697                      56      cmp.l (sp),d3 ;But before moving left, we need to ensure that d3 < the current x to ensure it doesnt hit wall.
+000000A4  6CA6                      57      bge SwitchToRightDown ;We need to go right instead otherwise.
+000000A6                            58      
+000000A6  9397                      59      sub.l d1,(sp) ;Gets new x value if it is value and stores in stack
+000000A8                            60  
+000000A8  4FF9 00FFFFC0             61      lea $00FFFFC0,sp ;Goes to actually draw pancake entity
+Line 62 ERROR: Undefined symbol
+000000AE  4EB9 004DBD16             62      jsr DrawTheCake
+000000B4                            63      
+000000B4                            64  GoUp:
+000000B4  4FF9 00FFFF88             65      lea $00FFFF88,sp
+000000BA  5397                      66      sub.l #1,(sp) ;Decrements number of spaces we will continue moving upwards by one since we're moving up again here
+000000BC                            67      
+000000BC  4FF9 00FFFF74             68      lea $00FFFF74,sp
+000000C2  4EB9 000001CA             69      jsr VerticalData
+000000C8                            70      
+000000C8  4FF9 00FFFF84             71      lea $00FFFF84,sp
+000000CE  0C97 00000001             72      cmp.l #1,(sp) ;Checks if we're moving left, otherwise dropping into function SwitchToRightUp
+000000D4  6700 0046                 73      beq LeftUp
+000000D8                            74  
+000000D8                            75  SwitchToRightUp:
+000000D8  4FF9 00FFFF84             76      lea $00FFFF84,sp ;Sets pancake to moving in the right direction
+000000DE  2EBC 00000002             77      move.l #2,(sp)
+000000E4                            78      
+000000E4                            79  RightUp:
+000000E4  4FF9 00FFFF74             80      lea $00FFFF74,sp
+000000EA  4EB9 00000140             81      jsr MoveUp
+000000F0                            82      
+000000F0  4FF9 00FFFF9C             83      lea $00FFFF9C,sp
+000000F6  D697                      84      add.l (sp),d3
+000000F8                            85       
+000000F8  B6BC 000002BC             86      cmp.l #700,d3 ;But before moving right, we need to ensure that d3 < 700 to ensure it doesnt hit wall.
+000000FE  6C00 0010                 87      bge SwitchToLeftUp ;We need to go left instead otherwise.
+00000102                            88      
+00000102  D397                      89      add.l d1,(sp) ;If valid, adds displacement to current x position value  
+00000104  4FF9 00FFFFC0             90      lea $00FFFFC0,sp
+Line 91 ERROR: Undefined symbol
+0000010A  4EB9 004DBD16             91      jsr DrawTheCake
+00000110                            92      
+00000110                            93  SwitchToLeftUp:
+00000110  4FF9 00FFFF84             94      lea $00FFFF84,sp
+00000116  2EBC 00000001             95      move.l #1,(sp)
+0000011C                            96      
+0000011C                            97  LeftUp:
+0000011C  4FF9 00FFFF74             98      lea $00FFFF74,sp
+00000122  4EB9 00000140             99      jsr MoveUp
+00000128                           100      
+00000128  4FF9 00FFFF9C            101      lea $00FFFF9C,sp
+0000012E                           102       
+0000012E  B697                     103      cmp.l (sp),d3 ;But before moving left, we need to ensure that d1 < the current x to ensure it doesnt hit wall.
+00000130  6EA6                     104      bgt SwitchToRightUp ;We need to go right instead.
+00000132                           105      
+00000132  9397                     106      sub.l d1,(sp)
+00000134                           107      
+00000134  4FF9 00FFFFC0            108      lea $00FFFFC0,sp ;Goes to function to actually draw pancake onscreen
+Line 109 ERROR: Undefined symbol
+0000013A  4EB9 004DBD16            109      jsr DrawTheCake
+00000140                           110      
+00000140                           111  MoveUp:
+00000140  4FF9 00FFFF7C            112      lea $00FFFF7C,sp ;Repeats shared segments for pancake movement
+00000146  4EB9 00000194            113      jsr SharedUpMovement
+0000014C  4FF9 00FFFF98            114      lea $00FFFF98,sp
+00000152                           115      
+00000152  9197                     116      sub.l d0,(sp) ;Gets new y value by subtracting acceleration
+00000154                           117        
+00000154  4FF9 00FFFF7C            118      lea $00FFFF7C,sp
+0000015A  4EB9 000001AA            119      jsr SharedEnding
+00000160                           120      
+00000160                           121  MoveDown:
+00000160  4FF9 00FFFF7C            122      lea $00FFFF7C,sp ;Repeats shared segments for pancake movement
+00000166  4EB9 00000180            123      jsr SharedDownMovement
+0000016C  4FF9 00FFFF98            124      lea $00FFFF98,sp
+00000172                           125      
+00000172  D197                     126      add.l d0,(sp) ;Changes y position by adding our calculated acceleration   
+00000174                           127      
+00000174  4FF9 00FFFF7C            128      lea $00FFFF7C,sp
+0000017A  4EB9 000001AA            129      jsr SharedEnding
+00000180                           130      
+00000180                           131  SharedDownMovement:
+00000180                           132      ;Grabs y velocity and adds y acceleration
+00000180  4FF9 00FFFFA4            133      lea $00FFFFA4,sp
+00000186  D197                     134      add.l d0,(sp)
+00000188  2017                     135      move.l (sp),d0
+0000018A                           136      
+0000018A  EC88                     137      lsr.l #6,d0 ;Shifts to get rid of decimal remainder, we now have the number of spaces traversed vertically
+0000018C  4FF9 00FFFF78            138      lea $00FFFF78,sp
+00000192  4E75                     139      rts
+00000194                           140      
+00000194                           141  SharedUpMovement:
+00000194                           142      ;Grabs y velocity and subtracts y acceleration
+00000194  4FF9 00FFFFA4            143      lea $00FFFFA4,sp
+0000019A  E488                     144      lsr.l #2,d0
+0000019C  9197                     145      sub.l d0,(sp)
+0000019E  2017                     146      move.l (sp),d0
+000001A0                           147      
+000001A0  EC88                     148      lsr.l #6,d0 ;Shifts to get rid of decimal remainder, we now have the number of spaces traversed vertically
+000001A2  4FF9 00FFFF78            149      lea $00FFFF78,sp
+000001A8  4E75                     150      rts
+000001AA                           151      
+000001AA                           152  SharedEnding:
+000001AA  4FF9 00FFFF98            153      lea $00FFFF98,sp
+000001B0  2417                     154      move.l (sp),d2 ;Moves y position into d2 for drawing rectangle
+000001B2                           155      
+000001B2  E889                     156      lsr.l #4,d1 ;Shifts x velocity right by 4 bits since we are dealing with decimal values
+000001B4  069F 00000000            157      add.l #0,(sp)+ ;Grabs x position
+000001BA                           158      
+Line 159 ERROR: Undefined symbol
+000001BA  263C 004DBD16            159      move.l #PancakeWidth,d3 ;Moves width of cake plus x veloctiy plus current x into d3 to get rightmost value of new cake
+000001C0  D681                     160      add.l d1,d3
+000001C2                           161      
+000001C2  4FF9 00FFFF70            162      lea $00FFFF70,sp
+000001C8  4E75                     163      rts
+000001CA                           164      
+000001CA                           165  VerticalData:
+000001CA  4FF9 00FFFFA0            166      lea $00FFFFA0,sp
+000001D0  2017                     167      move.l (sp),d0 ;Saves acceleration to d0
+000001D2                           168      
+000001D2  4FF9 00FFFFA8            169      lea $00FFFFA8,sp
+000001D8  2217                     170      move.l (sp),d1 ;moves x velocity into d1
+000001DA                           171      
+000001DA  4FF9 00FFFF70            172      lea $00FFFF70,sp
+000001E0  4E75                     173      rts
+000001E2                           174  
+Line 175 WARNING: END directive missing, starting address not set
+
+5 errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+GODOWN              26
+GOUP                B4
+LEFTDOWN            90
+LEFTUP              11C
+MOVEDOWN            160
+MOVEUP              140
+MOVINGLEFT          6
+MOVINGRIGHT         0
+RIGHTDOWN           58
+RIGHTUP             E4
+SHAREDDOWNMOVEMENT  180
+SHAREDENDING        1AA
+SHAREDUPMOVEMENT    194
+SWITCHTOLEFTDOWN    84
+SWITCHTOLEFTUP      110
+SWITCHTORIGHTDOWN   4C
+SWITCHTORIGHTUP     D8
+UPORDOWN            16
+VERTICALDATA        1CA

@@ -1,0 +1,65 @@
+003BE0F0 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 10/8/2022 4:20:16 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Pongcake - Player Movement
+00000000                             3  * Written by : Gabrielle Tristani
+00000000                             4  * Date       : 
+00000000                             5  * Description: A collection of functions that allows the player's frying pan to move left or right based on user input
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  MoveRight:
+00000000  4FF9 00FFFFB8              8      lea $00FFFFB8,sp
+00000006                             9      ;Get the rightmost x value of the current position into d0
+00000006  2017                      10      move.l (sp),d0
+Line 11 ERROR: Undefined symbol
+00000008  0680 004DBD16             11      add.l #PlayerWidth,d0
+0000000E                            12      
+0000000E  243C 000002BC             13      move.l #700, d2
+Line 14 ERROR: Undefined symbol
+00000014  0482 004DBD16             14      sub.l #PlayerWidth, d2
+0000001A                            15      
+0000001A  B082                      16      cmp.l d2,d0 ;Makes sure that it is sufficiently far from the right wall
+Line 17 ERROR: Undefined symbol
+0000001C  6C00 BCF8                 17      bge BackToGame
+00000020                            18      
+Line 19 ERROR: Undefined symbol
+00000020  0480 004DBD16             19      sub.l #PlayerWidth,d0
+Line 20 ERROR: Undefined symbol
+00000026  0480 004DBD16             20      sub.l #PlayerWidth,d0
+Line 21 ERROR: Undefined symbol
+0000002C  0697 004DBD16             21      add.l #PlayerWidth,(sp)
+00000032                            22      
+00000032  4FF9 00FFFFDC             23      lea $00FFFFDC,sp
+Line 24 ERROR: Undefined symbol
+00000038  4EB9 004DBD16             24      jsr DrawPlayer
+0000003E                            25      
+0000003E                            26  MoveLeft:
+0000003E  4FF9 00FFFFB8             27      lea $00FFFFB8,sp
+00000044                            28      ;Get the leftmost x value of the current position into d0
+00000044  2017                      29      move.l (sp),d0
+Line 30 ERROR: Undefined symbol
+00000046  0480 004DBD16             30      sub.l #PlayerWidth,d0
+0000004C                            31      
+Line 32 ERROR: Undefined symbol
+0000004C  B0BC 004DBD16             32      cmp.l #PlayerWidth,d0 ;Makes sure that it is sufficiently far from the left wall
+Line 33 ERROR: Undefined symbol
+00000052  6F00 BCC2                 33      ble BackToGame
+00000056                            34      
+Line 35 ERROR: Undefined symbol
+00000056  0497 004DBD16             35      sub.l #PlayerWidth,(sp)
+0000005C                            36      
+0000005C  4FF9 00FFFFDC             37      lea $00FFFFDC,sp
+Line 38 ERROR: Undefined symbol
+00000062  4EB9 004DBD16             38      jsr DrawPlayer
+Line 39 WARNING: END directive missing, starting address not set
+
+12 errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+MOVELEFT            3E
+MOVERIGHT           0

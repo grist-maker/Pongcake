@@ -1,0 +1,634 @@
+003BE130 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 10/15/2022 3:23:16 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Pongcake - Title and Initialization
+00000000                             3  * Written by : Gabrielle Tristani
+00000000                             4  * Date       :
+00000000                             5  * Description: A program containing starting functions to initialize game state and replay the game. It handles drawing the initial title bitmap, waiting for user input to begin the game,
+00000000                             6  * and initializing values for the pancake before drawing it in other programs.
+00000000                             7  *-----------------------------------------------------------
+00000000                             8  FirstTimeCheck:
+00000000  4FF9 00FFFFD4              9      lea $00FFFFD4,sp
+00000006  0C97 00000001             10      cmp.l #1,(sp)
+0000000C  6700 002A                 11      beq DrawingTitle
+00000010                            12      
+00000010                            13  LoadInMusic:
+Line 14 ERROR: Undefined symbol
+00000010  43F9 004DBD16             14       lea backgroundMusic,a1
+00000016  7200                      15       move.l #0,d1
+00000018  704A                      16       move.l #74,d0
+0000001A  4E4F                      17       TRAP #15
+0000001C                            18         
+Line 19 ERROR: Undefined symbol
+0000001C  43F9 004DBD16             19       lea pancakeFlip,a1
+00000022  7200                      20       move.l #0,d1
+00000024  7047                      21       move.l #71,d0
+00000026  4E4F                      22       TRAP #15  
+00000028                            23  
+00000028                            24  FirstTime: ;First function, used to draw the start screen. Includes bitmap drawing function.
+00000028  705C                      25      move.l #92,d0 ;Sets double buffer mode
+0000002A  7211                      26      move.l #17,d1
+0000002C  4E4F                      27      TRAP #15
+0000002E                            28      
+0000002E  123C 0000                 29       move.b #0,d1 ;Play title screen music loop
+00000032  7401                      30       move.l #1,d2
+00000034  704D                      31       move.l #77,d0
+00000036  4E4F                      32       TRAP #15
+00000038                            33  
+00000038                            34  DrawingTitle:
+00000038  4FF9 01000000             35      lea $01000000,sp
+Line 36 ERROR: Undefined symbol
+0000003E  41F9 004DBD16             36      lea startMap,a0
+00000044                            37      INCLUDE 'BitmapDrawer.X68'
+00000044                            38  
+00000044                            39  SetWindow:
+00000044                            40          ;Change output window to match desired dimensions
+00000044  4FF9 00FFFFA0             41          lea $00FFFFA0,sp ;Checks if y acceleration was initialized, otherwise, going to start.
+0000004A  0C97 00000031             42          cmp.l #49,(sp)
+00000050  6700 001A                 43          beq DrawTitle
+00000054                            44      
+00000054  7200                      45          move.l #0,d1
+00000056  7000                      46          move.l #0,d0
+00000058                            47          
+00000058  223C 000002BC             48          move.l #700, d1
+0000005E  E189                      49          lsl.l #8, d1
+00000060  E189                      50          lsl.l #8, d1 
+00000062  0681 000002BC             51          add.l #700, d1
+00000068  7021                      52          move.l #33, d0
+0000006A  4E4F                      53          trap #15
+0000006C                            54  
+0000006C                            55  DrawTitle:
+0000006C  4FF9 01000000             56          lea $01000000,sp
+00000072  2008                      57          move.l a0, d0 ;Creates placeholder for pixel array address in d0
+00000074  0658 0000                 58          add.w #0, (a0)+ ;skips through header to parse information
+00000078  0698 00000000             59          add.l #0, (a0)+
+0000007E  0698 00000000             60          add.l #0, (a0)+
+00000084  D010                      61          add.b (a0),d0   ;saves pointer to pixel data to d0
+00000086                            62          
+00000086  2040                      63          move.l d0,a0
+00000088                            64          
+00000088                            65          ;Now, we can load in the bitmap and establish relevant stack variables
+00000088  2F3C 00000000             66          move.l #0, -(sp) ;Add top left x value. (00FFFFFC)
+0000008E  2F3C 00000000             67          move.l #0,-(sp) ;Add top left y value. (00FFFFF8)
+00000094  2F3C 000002BC             68          move.l #700, -(sp) ;Add width of chunk.(00FFFFF4)        
+0000009A  2F3C 000002BC             69          move.l #700, -(sp) ;Add height of chunk. (00FFFFF0)
+000000A0  2F3C 00000000             70          move.l #0, -(sp) ;Add top left x value on output screen. (00FFFFEC)
+000000A6  2F3C 00000000             71          move.l #0, -(sp) ;Add top left y value on output screen.(00FFFFE8)
+000000AC                            72          
+000000AC  2F3C 00000000             73          move.l #0, -(sp) ;Add dummy stack variable as buffer space (00FFFFE4)
+000000B2  2F3C 000002BC             74          move.l #700,-(sp) ;Create new index in stack to store total width of bitmap. (00FFFFE0)
+000000B8  2F3C 000002BC             75          move.l #700,-(sp) ;Create new index in stack to store total height of bitmap. (00FFFFDC)
+000000BE                            76          
+000000BE  2008                      77          move.l a0, d0 ;Creates placeholder for pixel array address in d0
+000000C0  0658 0000                 78          add.w #0, (a0)+ ;skips through header to parse information
+000000C4  0698 00000000             79          add.l #0, (a0)+
+000000CA  0698 00000000             80          add.l #0, (a0)+
+000000D0  D010                      81          add.b (a0),d0   ;saves pointer to pixel data to d0
+000000D2                            82          
+000000D2  2040                      83          move.l d0,a0
+000000D4                            84          
+000000D4  243C 000002BB             85          move.l #699,d2 ;Initializes starting data register values to properly fit title
+000000DA  7600                      86          move.l #0,d3
+000000DC  283C 000002BB             87          move.l #699,d4
+000000E2  7A01                      88          move.l #1,d5
+000000E4  2C3C 000002BC             89          move.l #700,d6
+000000EA  2E3C 000002BB             90          move.l #699,d7
+000000F0                            91          
+000000F0  4FF9 00FFFF24             92          lea $00FFFF24,sp
+000000F6                            93          
+000000F6  4EB9 00000166             94          jsr XYChecks     ;Checks that x and y are at proper positions before printing pixels, repeating until no pixels are left, then exiting
+000000FC  4EF9 0000021C             95          jmp Exit
+00000102                            96  
+00000102                            97  CreatePixelArrayValues:  
+00000102  2008                      98          move.l a0, d0 ;Creates placeholder for pixel array address in d0
+00000104  0658 0000                 99          add.w #0, (a0)+ ;skips through header to parse information
+00000108  0698 00000000            100          add.l #0, (a0)+
+0000010E  0698 00000000            101          add.l #0, (a0)+
+00000114  D010                     102          add.b (a0),d0   ;saves pointer to pixel data to d0
+00000116                           103          
+00000116  2040                     104          move.l d0,a0
+00000118                           105          
+00000118  243C 000002BB            106          move.l #699,d2 ;Starting y value
+0000011E  7600                     107          move.l #0,d3
+00000120  283C 000002BB            108          move.l #699,d4
+00000126  7A01                     109          move.l #1,d5
+00000128  2C3C 000002BC            110          move.l #700,d6
+0000012E  2E3C 000002BB            111          move.l #699,d7
+00000134                           112          
+00000134  4FF9 00FFFF24            113          lea $00FFFF24,sp
+0000013A  4EB9 00000166            114          jsr XYChecks
+00000140                           115          
+00000140  4FF9 00FFFFD8            116          lea $00FFFFD8,sp
+00000146  4E75                     117          rts   
+00000148                           118             
+00000148                           119  InitialY:
+00000148  4FF9 00FFFFE0            120      lea $00FFFFE0,sp
+0000014E                           121      
+0000014E  2017                     122      move.l (sp),d0 ;Loads number of pixels per row into d0, multiplies by 4 to get bytes per row
+00000150  C0FC 0004                123      mulu.w #4,d0
+00000154                           124      
+00000154  2204                     125      move.l d4,d1 ;Moves d4 to d1 to have d1 carry difference between initial y value and current y value, how many rows must be traversed
+00000156  9287                     126      sub.l d7,d1
+00000158                           127      
+00000158  C0C1                     128      mulu.w d1,d0 ;Multiplies number of rows by bytes per row
+0000015A                           129      
+0000015A  D1C0                     130      add.l d0,a0 ;Increments a0 to get to right position
+0000015C                           131      
+0000015C  2807                     132      move.l d7,d4 ;Initializes d4 properly
+0000015E                           133      
+0000015E  BE84                     134      cmp.l d4,d7
+00000160                           135      
+00000160  4FF9 00FFFFD4            136      lea $00FFFFD4,sp
+00000166                           137      
+00000166                           138  XYChecks:
+00000166  BE84                     139      cmp.l d4,d7 ;Checks if starting y has been reached yet, branching to InitialY to initialize if not
+00000168  6DDE                     140      blt InitialY
+0000016A                           141      
+0000016A  2E7C 00FFFFFC            142      move.l #$00FFFFFC,sp
+00000170                           143      
+00000170  BA97                     144      cmp.l (sp),d5 ;Checks if current x value is at least one greater than leftmost x value, otherwise branching to ChangeXPlus
+00000172  6D00 0050                145      blt ChangeXPlus
+00000176                           146      
+00000176  BC85                     147      cmp.l d5,d6 ;Check to make sure current x value does not exceed rightmost x value, else branching to ChangeXMinus
+00000178  6D00 0068                148      blt ChangeXMinus
+0000017C                           149      
+0000017C                           150  DrawPixel:
+0000017C  4FF9 00FFFF20            151      lea $00FFFF20,sp
+00000182                           152      
+00000182                           153      ;Grabs and operates on pixel color value
+00000182  2210                     154      move.l (a0),d1
+00000184  123C 0000                155      move.b #00, d1 ;Zeroes out the junk data to be in correct format
+00000188                           156      
+00000188  E159                     157      rol.w #8, d1
+0000018A  E199                     158      rol.l #8, d1
+0000018C  4841                     159      swap.w d1
+0000018E  E199                     160      rol.l #8, d1
+00000190  E159                     161      rol.w #8, d1
+00000192  E099                     162      ror.l #8, d1 ;leaves us with 00BBGGRR, meaning pen color is set for pixel color
+00000194                           163      
+00000194  103C 0050                164      move.b #80, d0
+00000198  4E4F                     165      TRAP #15 ;Sets pen color
+0000019A                           166      
+0000019A  3203                     167      move.w d3, d1 ;Sets coordinate in x for pixel, with y pixel coordinate already in d2
+0000019C  103C 0052                168      move.b #82, d0 ;Draws pixel
+000001A0  4E4F                     169      TRAP #15
+000001A2                           170      
+000001A2  5283                     171      add.l #1, d3 ;Increments the x counter for output window
+000001A4  5285                     172      add.l #1, d5 ;Increments x counter for bitmap traversal
+000001A6                           173      
+000001A6  0698 00000000            174      add.l #0, (A0)+ ;Increments a0 to get to next value
+000001AC                           175     
+000001AC  BC45                     176      cmp d5,d6 ;If curent x is greater than maximum x, we can check to see if the same is true for y and every pixel is printed.
+000001AE  6CB6                     177      bge XYChecks
+000001B0                           178      
+000001B0                           179      ;To check y, we want to see if its less than the top left corner y
+000001B0  2E7C 00FFFFF8            180      move.l #$00FFFFF8,sp
+000001B6  2017                     181      move.l (sp),d0
+000001B8  4FF9 00FFFF20            182      lea $00FFFF20,sp
+000001BE                           183      
+000001BE  B044                     184      cmp d4,d0 ;Compares current y to highest row, if not equal, repeats XYChecks. Otherwise returns
+000001C0  6DA4                     185      blt XYChecks
+000001C2  4E75                     186      rts
+000001C4                           187      
+000001C4                           188  ChangeXPlus:
+000001C4  2017                     189      move.l (sp),d0 ;puts the leftmost x value into d0
+000001C6  9085                     190      sub.l d5,d0 ;Subtracts current x value from the leftmost x value to get difference between the two, how many spaces a0 needs to increment
+000001C8                           191      
+000001C8  5280                     192      add.l #1,d0
+000001CA  2A17                     193      move.l (sp),d5 ;set d5 to proper leftmost value
+000001CC                           194      
+000001CC  5285                     195      add.l #1,d5
+000001CE  C0FC 0004                196      mulu.w #4,d0 ;Multiplies by bytes per pixel
+000001D2                           197      
+000001D2  D1C0                     198      add.l d0, A0 ;Increments the address value to right location
+000001D4                           199      
+000001D4  4FF9 00FFFF20            200      lea $00FFFF20,sp
+000001DA                           201      
+000001DA  BABC 00000000            202      cmp.l #0,d5
+000001E0  6C84                     203      bge XYChecks
+000001E2                           204      
+000001E2                           205  ChangeXMinus:
+000001E2                           206     ;Since current x has surpassed the rightmost x value, address should be incremented by the total bitmap width - chunk width 
+000001E2                           207      
+000001E2  2E7C 00FFFFE0            208      move.l #$00FFFFE0,sp
+000001E8                           209      
+000001E8  2017                     210      move.l (sp),d0 ;Saves bitmap width to d0
+000001EA                           211      
+000001EA  2E7C 00FFFFF4            212      move.l #$00FFFFF4,sp
+000001F0  9097                     213      sub.l (sp),d0 ;Subtracts chunk width from d0
+000001F2                           214      
+000001F2  5384                     215      sub.l #1, d4 ;Decrements y values as well to change to new row logically and in chunk
+000001F4  5382                     216      sub.l #1,d2
+000001F6                           217  
+000001F6  2E7C 00FFFFEC            218      move.l #$00FFFFEC,sp
+000001FC                           219      
+000001FC  2617                     220      move.l (sp),d3 ;Resets current x values to be leftmost values
+000001FE                           221  
+000001FE  2E7C 00FFFFFC            222      move.l #$00FFFFFC,sp
+00000204                           223      
+00000204  2A17                     224      move.l (sp),d5 ;Sets to leftmost x value on output window logically
+00000206  5285                     225      add.l #1,d5
+00000208                           226      
+00000208  4FF9 00FFFF20            227      lea $00FFFF20,sp
+0000020E  C0FC 0004                228      mulu.w #4,d0
+00000212                           229      
+00000212  D1C0                     230      add.l d0,a0 ;Increments a0 to proper address index
+00000214                           231      
+00000214  BC85                     232      cmp.l d5,d6
+00000216  6C00 FF4E                233      bge XYChecks
+0000021A                           234      
+0000021A  4E75                     235      rts
+0000021C                           236      
+0000021C                           237  Exit: ;Releases program from execution
+0000021C                           238  
+0000021C                           239  
+0000021C                           240  -------------------- end include --------------------
+0000021C  705E                     241      move.l #94,d0 ;Loads the start screen ONLY after fully loaded
+0000021E  4E4F                     242      TRAP #15
+00000220                           243      
+00000220                           244  WaitToBegin: ;Imposes a wait on the start screen until the user presses the spacebar
+00000220  7005                     245      move.l #5,d0
+00000222  4E4F                     246      TRAP #15
+00000224                           247      
+00000224  B23C 0020                248      cmp.b #32,d1 ;Checks that user input (if received) was in fact the spacebar
+00000228  66F6                     249      bne WaitToBegin
+0000022A                           250  
+0000022A                           251  ResetStack: ;Sets stack to draw new bitmap background for the scene, which should stay consistent for gameplay with moving entities.
+Line 252 ERROR: Undefined symbol
+0000022A  41F9 004DBD16            252      lea bitmap,a0 ;Sets proper bitmap image
+00000230                           253      
+00000230                           254      ;Initializes stack values to match specifications of bitmap size and start/end points
+00000230  4FF9 00FFFFFC            255      lea $00FFFFFC,sp
+00000236  2EBC 00000000            256      move.l #0,(sp)
+0000023C  2F3C 00000096            257      move.l #150,-(sp)
+00000242  2F3C 000002BC            258      move.l #700,-(sp)
+00000248  2F3C 00000226            259      move.l #550,-(sp)
+0000024E  2F3C 00000000            260      move.l #0,-(sp)
+00000254  2F3C 00000096            261      move.l #150,-(sp)
+0000025A                           262      
+0000025A  4FF9 00FFFFE4            263      lea $00FFFFE4,sp
+00000260  2F3C 000002BC            264      move.l #700,-(sp)
+00000266  2F3C 000002BC            265      move.l #700,-(sp)
+0000026C                           266  
+0000026C  4EB8 0102                267      jsr CreatePixelArrayValues ;Jumps to portion to reset data register values and reprint array
+00000270                           268      
+00000270  4FF9 00FFFFDC            269      lea $00FFFFDC,sp
+00000276                           270      
+00000276                           271      INCLUDE 'D:\FIEA Class Notes\Programming Fundamentals\Assignment3\SevenSegmentLEDFunctionTable.X68'
+00000276                           272  ;    ORG    $1000
+00000276                           273  
+00000276                           274  StartOfLED: ;This is used to wipe the top section of the screen to be cleared for the score bar display
+00000276  7050                     275      move.l #80, d0
+00000278  7200                     276      move.l #$00000000, d1 ;Set pen color to black
+0000027A  4E4F                     277      TRAP #15
+0000027C                           278      
+0000027C  7051                     279      move.l #81, d0
+0000027E  7200                     280      move.l #$00000000, d1 ;Set fill color to black
+00000280  4E4F                     281      TRAP #15
+00000282                           282      
+00000282  7057                     283      move.l #87,d0 ;Wipes current score bar by drawing a solid black rectangle over the top
+00000284  323C 0000                284      move.w #0, d1
+00000288  343C 0000                285      move.w #0, d2
+0000028C  363C 02BC                286      move.w #700, d3
+00000290  383C 0096                287      move.w #150, d4
+00000294  4E4F                     288      TRAP #15
+00000296                           289      
+00000296  4EF9 000005AA            290      jmp Finish ;Goes to Finish afterwards, as clearing this segment is all that needs to happen to start the program
+0000029C                           291      
+0000029C                           292  SetValues:  ;Function used to determine which digit is to be printed and where, based on current hundreds, tens, or ones value.
+0000029C  264F                     293      move.l sp,a3
+0000029E  DFFC 0000009C            294      add.l #156,sp
+000002A4                           295      
+000002A4  2A17                     296      move.l (sp),d5 ;Current value is saved in d5
+000002A6                           297      
+000002A6  BABC 0000000A            298      cmp.l #10,d5 ;Ensures digit falls within a single digit value, zeroing it and incrementing the digit of the next highest order by one otherwise
+000002AC  6D00 0010                299      blt GetPrintTableIndex ;Skips ahead if the digit is valid
+000002B0                           300      
+000002B0                           301  ZeroValue: ;Function used to zero a value and increment that of the next order
+000002B0  2EBC 00000000            302      move.l #0,(sp)
+000002B6                           303  
+000002B6  588F                     304      add.l #4,sp ;Moves to next value in stack, incrementing by one. This would be tens or hundreds digit
+000002B8  5297                     305      add.l #1,(sp)
+000002BA  598F                     306      sub.l #4,sp
+000002BC                           307  
+000002BC  7A00                     308      move.l #0,d5 ;We also zero the value that should be equivalent to the pixel being operated on
+000002BE                           309      
+000002BE                           310  GetPrintTableIndex:
+000002BE  DFFC 0000000C            311      add.l #12,sp ;number of pixels incremented from base value for target digit is saved to d6
+000002C4  2C17                     312      move.l (sp),d6
+000002C6                           313      
+000002C6  41F9 00000582            314      lea PrintTable,a0 ;We load PrintTable into a0, then pointer to address of function that prints value we want to print into d1
+000002CC                           315      
+000002CC  CAFC 0004                316      mulu.w #4,d5 ;Multiplies d5 by 4 and adds to d1, used to provide number of spaces that should be incremented in a0 for proper digit
+000002D0  2205                     317      move.l d5,d1
+000002D2  8AFC 0004                318      divu.w #4,d5
+000002D6                           319      
+000002D6  2070 1000                320      move.l (a0,d1),a0
+000002DA                           321      
+000002DA                           322  CyclingValues:
+000002DA  2410                     323      move.l (a0),d2 ;Moves the segment to be printed into d2
+000002DC                           324      
+000002DC  5888                     325      add.l #4,a0 ;goes to next index
+000002DE                           326      
+000002DE  B4BC 00000000            327      cmp.l #0,d2 ;As long as the value is not 0, we still have more segments to pring
+000002E4  6700 000C                328      beq EndCycle ;get out if 0 is set here
+000002E8                           329      
+000002E8  2242                     330      move.l d2,a1 ;We jump to correct segment print function
+000002EA  4FF9 00FFFF64            331      lea $00FFFF64,sp
+000002F0  4E91                     332      jsr (a1)
+000002F2                           333      
+000002F2                           334  EndCycle:
+000002F2  B4BC 00000000            335      cmp.l #0,d2
+000002F8  66E0                     336      bne CyclingValues
+000002FA                           337      
+000002FA  2E4B                     338      move.l a3,sp
+000002FC  4E75                     339      rts
+000002FE                           340      
+000002FE                           341  SegmentA:
+000002FE  7057                     342      move.l #87,d0 ;Draws A segment then returns to CyclingValues
+00000300  323C 0005                343      move.w #5, d1
+00000304  D286                     344      add.l d6,d1
+00000306  343C 0000                345      move.w #0, d2
+0000030A  363C 0019                346      move.w #25, d3
+0000030E  D686                     347      add.l d6,d3
+00000310  383C 0005                348      move.w #5, d4
+00000314  4E4F                     349      TRAP #15
+00000316                           350      
+00000316  4E75                     351      rts
+00000318                           352      
+00000318                           353  SegmentB:
+00000318  7057                     354      move.l #87,d0 ;Draws B segment then returns to CyclingValues
+0000031A  323C 0019                355      move.w #25, d1
+0000031E  D286                     356      add.l d6,d1
+00000320  343C 0005                357      move.w #5, d2
+00000324  363C 001E                358      move.w #30, d3
+00000328  D686                     359      add.l d6,d3
+0000032A  383C 0019                360      move.w #25, d4
+0000032E  4E4F                     361      TRAP #15
+00000330                           362      
+00000330  4E75                     363      rts
+00000332                           364      
+00000332                           365  SegmentC:
+00000332  7057                     366      move.l #87,d0 ;Draws C segment then returns to CyclingValues
+00000334  323C 0019                367      move.w #25, d1
+00000338  D286                     368      add.l d6,d1
+0000033A  343C 001E                369      move.w #30, d2
+0000033E  363C 001E                370      move.w #30, d3
+00000342  D686                     371      add.l d6,d3
+00000344  383C 0032                372      move.w #50, d4
+00000348  4E4F                     373      TRAP #15
+0000034A                           374      
+0000034A  4E75                     375      rts
+0000034C                           376      
+0000034C                           377  SegmentD:
+0000034C  7057                     378      move.l #87,d0 ;Draws D segment then returns to CyclingValues
+0000034E  323C 0005                379      move.w #5, d1
+00000352  D286                     380      add.l d6,d1
+00000354  343C 0032                381      move.w #50, d2
+00000358  363C 0019                382      move.w #25, d3
+0000035C  D686                     383      add.l d6,d3
+0000035E  383C 0037                384      move.w #55, d4
+00000362  4E4F                     385      TRAP #15
+00000364                           386      
+00000364  4E75                     387      rts
+00000366                           388      
+00000366                           389  SegmentE:
+00000366  7057                     390      move.l #87,d0 ;Draws E segment then returns to CyclingValues
+00000368  323C 0000                391      move.w #0, d1
+0000036C  D286                     392      add.l d6,d1
+0000036E  343C 001E                393      move.w #30, d2
+00000372  363C 0005                394      move.w #5, d3
+00000376  D686                     395      add.l d6,d3
+00000378  383C 0032                396      move.w #50, d4
+0000037C  4E4F                     397      TRAP #15
+0000037E                           398      
+0000037E  4E75                     399      rts
+00000380                           400      
+00000380                           401  SegmentF:
+00000380  7057                     402      move.l #87,d0 ;Draws F segment then returns to CyclingValues
+00000382  323C 0000                403      move.w #0, d1
+00000386  D286                     404      add.l d6,d1
+00000388  343C 0005                405      move.w #5, d2
+0000038C  363C 0005                406      move.w #5, d3
+00000390  D686                     407      add.l d6,d3
+00000392  383C 0019                408      move.w #25, d4
+00000396  4E4F                     409      TRAP #15
+00000398                           410      
+00000398  4E75                     411      rts
+0000039A                           412      
+0000039A                           413  SegmentG:
+0000039A  7057                     414      move.l #87,d0 ;Draws G segment then returns to CyclingValues
+0000039C  323C 0005                415      move.w #5, d1
+000003A0  D286                     416      add.l d6,d1
+000003A2  343C 0019                417      move.w #25, d2
+000003A6  363C 0019                418      move.w #25, d3
+000003AA  D686                     419      add.l d6,d3
+000003AC  383C 001E                420      move.w #30, d4
+000003B0  4E4F                     421      TRAP #15 
+000003B2                           422      
+000003B2  4E75                     423      rts  
+000003B4                           424      
+000003B4                           425  AddScore:
+000003B4  4FF9 00FFFFC8            426      lea $00FFFFC8, sp ;Grab current hundreds to see if its 9, continuing to check other values if so
+000003BA  0C97 00000009            427      cmp.l #9,(sp)
+000003C0  6600 0022                428      bne Valid
+000003C4                           429      
+000003C4  06A7 00000000            430      add.l #0,-(sp) ;Grab current tens to see if its 9, continuing to check other values if so
+000003CA  0C97 00000009            431      cmp.l #9,(sp)
+000003D0  6600 0012                432      bne Valid
+000003D4                           433      
+000003D4  06A7 00000000            434      add.l #0,-(sp) ;Grab current ones to see if its 9, stopping addition to the score if 999 is reached
+000003DA  0C97 00000009            435      cmp.l #9,(sp)
+000003E0  6700 00AA                436      beq GameLoop
+000003E4                           437         
+000003E4                           438  Valid:
+000003E4  4FF9 00FFFFC0            439      lea $00FFFFC0,sp ;grab current ones value and increments by one since an add has been requested
+000003EA  5297                     440      add.l #1,(sp)
+000003EC                           441      
+000003EC  7050                     442      move.l #80, d0
+000003EE  7200                     443      move.l #$00000000, d1 ;Set pen color to black
+000003F0  4E4F                     444      TRAP #15
+000003F2                           445      
+000003F2  7051                     446      move.l #81, d0
+000003F4  7200                     447      move.l #$00000000, d1 ;Set fill color to black
+000003F6  4E4F                     448      TRAP #15
+000003F8                           449      
+000003F8  7057                     450      move.l #87,d0 ;Wipes current score bar
+000003FA  323C 0000                451      move.w #0, d1
+000003FE  343C 0000                452      move.w #0, d2
+00000402  363C 02BC                453      move.w #700, d3
+00000406  383C 0078                454      move.w #120, d4
+0000040A  4E4F                     455      TRAP #15
+0000040C                           456      
+0000040C  7050                     457      move.l #80, d0
+0000040E  223C 0000FF00            458      move.l #$0000FF00, d1 ;Set pen color to green
+00000414  4E4F                     459      TRAP #15
+00000416                           460      
+00000416  7051                     461      move.l #81, d0
+00000418  223C 0000FF00            462      move.l #$0000FF00, d1 ;Set fill color to green
+0000041E  4E4F                     463      TRAP #15
+00000420                           464      
+00000420                           465  ScoreInitializer:
+00000420  4FF9 00FFFFD4            466      lea $00FFFFD4, sp 
+00000426  0C97 00000000            467      cmp.l #0,(sp) ;if value has already been initialized (hundreds digit distance from left of screen is set to 0), we can just go to PrintScore
+0000042C  6700 0040                468      beq PrintScore
+00000430                           469                  
+00000430  4FF9 00FFFFD8            470      lea $00FFFFD8,sp
+00000436  7050                     471      move.l #80, d0
+00000438  223C 0000FF00            472      move.l #$0000FF00, d1 ;Set pen color to green
+0000043E  4E4F                     473      TRAP #15
+00000440                           474      
+00000440  7051                     475      move.l #81, d0
+00000442  223C 0000FF00            476      move.l #$0000FF00, d1 ;Set fill color to green
+00000448  4E4F                     477      TRAP #15
+0000044A                           478      
+0000044A                           479      ;Begins value initialization for this program
+0000044A  2F3C 00000000            480      move.l #0,-(sp) ;How many pixels are incremented from base value for hundreds digit FFD4
+00000450  2F3C 00000046            481      move.l #70,-(sp) ;How many pixels are incremented from base value for tens digit FFD0
+00000456  2F3C 0000008C            482      move.l #140,-(sp) ; Pixels incremented from base value for ones digit FFCC
+0000045C  2F3C 00000000            483      move.l #0,-(sp) ;Curren hundreds value FFC8
+00000462  2F3C 00000000            484      move.l #0,-(sp) ;Current tens value FFC4
+00000468  2F3C 00000000            485      move.l #0,-(sp) ;Current ones value FFC0
+0000046E                           486      
+0000046E                           487  PrintScore:
+0000046E  4FF9 00FFFF28            488      lea $00FFFF28,sp ;Prints the ones digit
+00000474  4EB8 029C                489      jsr SetValues
+00000478                           490      
+00000478  4FF9 00FFFF2C            491      lea $00FFFF2C,sp ;Prints the tens digit
+0000047E  4EB8 029C                492      jsr SetValues
+00000482                           493      
+00000482  4FF9 00FFFF30            494      lea $00FFFF30,sp ;Prints the hundreds digit
+00000488  4EB8 029C                495      jsr SetValues
+0000048C                           496      
+0000048C                           497  GameLoop:
+0000048C  7051                     498      move.l #81, d0
+0000048E  7200                     499      move.l #$00000000, d1 ;Set fill color to black and then returns to program
+00000490  4E4F                     500      TRAP #15
+00000492                           501      
+00000492  4FF9 00FFFFD8            502      lea $00FFFFD8,sp
+00000498  4E75                     503      rts
+0000049A                           504  
+0000049A                           505  SegmentFunctionTable: ;Function pointer table that has references to the ordered list of function to print any given digit
+0000049A                           506                  ZeroPrint:
+0000049A= 000002FE 00000318 ...    507                      dc.l SegmentA, SegmentB, SegmentC, SegmentD, SegmentE, SegmentF,0 ;References segments used to print 0
+000004B6                           508                  OnePrint:
+000004B6= 00000318 00000332 ...    509                      dc.l SegmentB,SegmentC,0 ;References segments used to print 1
+000004C2                           510                  TwoPrint:
+000004C2= 000002FE 00000318 ...    511                      dc.l SegmentA,SegmentB, SegmentD, SegmentE, SegmentG,0 ;References segments used to print 2
+000004DA                           512                  ThreePrint:
+000004DA= 000002FE 00000318 ...    513                      dc.l SegmentA,SegmentB,SegmentC,SegmentD,SegmentG,0 ;References segments used to print 3
+000004F2                           514                  FourPrint:
+000004F2= 00000318 00000332 ...    515                      dc.l SegmentB,SegmentC,SegmentF,SegmentG,0 ;References segments used to print 4
+00000506                           516                  FivePrint:
+00000506= 000002FE 00000332 ...    517                      dc.l SegmentA,SegmentC,SegmentD,SegmentG,SegmentF,0 ;References segments used to print 5
+0000051E                           518                  SixPrint:
+0000051E= 000002FE 00000332 ...    519                      dc.l SegmentA,SegmentC,SegmentD,SegmentE,SegmentF,SegmentG,0 ;References segments used to print 6
+0000053A                           520                  SevenPrint:
+0000053A= 000002FE 00000318 ...    521                      dc.l SegmentA,SegmentB,SegmentC,0 ;References segments used to print 7
+0000054A                           522                  EightPrint:
+0000054A= 000002FE 00000318 ...    523                      dc.l SegmentA,SegmentB,SegmentC,SegmentD,SegmentE,SegmentF,SegmentG,0 ;References segments used to print 8
+0000056A                           524                  NinePrint:
+0000056A= 000002FE 00000318 ...    525                      dc.l SegmentA,SegmentB,SegmentC,SegmentF,SegmentG,0 ;References segments used to print 9
+00000582                           526                  
+00000582                           527  PrintTable: ;A table that contains references to each of the number printer routines, with each index correlating to the digit printed
+00000582= 0000049A 000004B6 ...    528                  dc.l ZeroPrint,OnePrint,TwoPrint,ThreePrint,FourPrint,FivePrint,SixPrint,SevenPrint,EightPrint,NinePrint
+000005AA                           529                  
+000005AA                           530  Finish:
+000005AA                           531  
+000005AA                           532  -------------------- end include --------------------
+000005AA  4EB8 0420                533          jsr ScoreInitializer ;Includes and calls seven segment LED counter with proper starting point in stack
+000005AE                           534      
+000005AE  2E7C 00FFFFBC            535      move.l #$00FFFFBC,sp ;Reset stack pointer
+000005B4                           536  
+000005B4  2F3C 0000015E            537      move.l #350,-(sp) ;Saves x coordinate for frying pan to stack
+000005BA                           538      
+000005BA  4FF9 00FFFFDC            539      lea $00FFFFDC,sp ;Goes on to draw the player frying pan
+Line 540 ERROR: Undefined symbol
+000005C0  4EB9 004DBD16            540      jsr DrawRectanglePlayer
+000005C6                           541      
+000005C6                           542  InitializeCake: ;Initializes pancake and calls function to draw it onscreen 
+000005C6  4FF9 00FFFFA8            543      lea $00FFFFA8,sp
+000005CC  2EBC 00000000            544      move.l #0,(sp)
+000005D2  2F3C 00000000            545      move.l #0,-(sp)
+000005D8                           546      
+000005D8  2F3C 00000031            547      move.l #49,-(sp) ;Saves 25 to y acceleration so this can be converted to -.25 pixels per .04 seconds, simulates gravity acting at about -9.8 / -10 pixels per 1.6 seconds
+000005DE                           548      
+000005DE  2F3C 0000015E            549      move.l #350,-(sp) ;Set x position to 350
+000005E4                           550  
+000005E4  2F3C 00000096            551      move.l #150,-(sp) ;Set y position to 150
+000005EA                           552      
+000005EA  2F3C 00000000            553      move.l #0,-(sp) ;Initializes several pancake variables to 0
+000005F0  2F3C 00000000            554      move.l #0,-(sp)
+000005F6  2F3C 00000000            555      move.l #0,-(sp)
+000005FC  2F3C 00000000            556      move.l #0,-(sp)
+00000602  2F3C 00000000            557      move.l #0,-(sp)
+00000608                           558      
+00000608  4FF9 00FFFF9C            559      lea $00FFFF9C,sp ;Puts proper value in d5 (x position of pancake) for draw rectangle trap command to be called
+0000060E  2A17                     560      move.l (sp),d5
+00000610  4FF9 00FFFF14            561      lea $00FFFF14,sp
+Line 562 ERROR: Undefined symbol
+00000616  4EB9 004DBD16            562      jsr DrawRectanglePancake
+0000061C                           563  
+0000061C                           564  
+0000061C                           565  
+0000061C                           566  
+0000061C                           567  
+0000061C                           568  
+Line 569 WARNING: END directive missing, starting address not set
+
+6 errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+ADDSCORE            3B4
+CHANGEXMINUS        1E2
+CHANGEXPLUS         1C4
+CREATEPIXELARRAYVALUES  102
+CYCLINGVALUES       2DA
+DRAWINGTITLE        38
+DRAWPIXEL           17C
+DRAWTITLE           6C
+EIGHTPRINT          54A
+ENDCYCLE            2F2
+EXIT                21C
+FINISH              5AA
+FIRSTTIME           28
+FIRSTTIMECHECK      0
+FIVEPRINT           506
+FOURPRINT           4F2
+GAMELOOP            48C
+GETPRINTTABLEINDEX  2BE
+INITIALIZECAKE      5C6
+INITIALY            148
+LOADINMUSIC         10
+NINEPRINT           56A
+ONEPRINT            4B6
+PRINTSCORE          46E
+PRINTTABLE          582
+RESETSTACK          22A
+SCOREINITIALIZER    420
+SEGMENTA            2FE
+SEGMENTB            318
+SEGMENTC            332
+SEGMENTD            34C
+SEGMENTE            366
+SEGMENTF            380
+SEGMENTFUNCTIONTABLE  49A
+SEGMENTG            39A
+SETVALUES           29C
+SETWINDOW           44
+SEVENPRINT          53A
+SIXPRINT            51E
+STARTOFLED          276
+THREEPRINT          4DA
+TWOPRINT            4C2
+VALID               3E4
+WAITTOBEGIN         220
+XYCHECKS            166
+ZEROPRINT           49A
+ZEROVALUE           2B0

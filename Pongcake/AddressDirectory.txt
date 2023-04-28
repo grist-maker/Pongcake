@@ -1,0 +1,36 @@
+Address Directory:
+
+Top left x value for bitmap - 00FFFFFC
+Top left Y value for bitmap - FFFFF8
+Width of chunk to draw - 00FFFFF4
+Height of chunk to draw 00FFFFF0
+Top left x value on output screen - 00FFFFEC
+Top left y value on output screen - 00FFFFE8
+Total width of bitmap - 00FFFFE0
+Total height of bitmap - 00FFFFDC
+
+Pixels incremented from base value for hundreds digit - 00FFFFD4
+Pixels incremented from base value for tens digit - 00FFFFD0
+Pixels incremented from base value for ones digit - 00FFFFCC
+Current hundreds value for score - 00FFFFC8
+Current tens value for score - 00FFFFC4
+Current ones value for score - 00FFFFC0
+
+PANCAKE
+Return to Game - 00FFFFAC
+X velocity of Pancake 1 - 00FFFFA8
+Y velocity of Pancake 1 - 00FFFFA4
+Y acceleration of Pancake 1 - 00FFFFA0
+X position of Pancake 1 - 00FFFF9C
+Y Position of Pancake 1 - 00FFFF98
+Return to CoverCake - 00FFFF90
+Return to CheckCake- 00FFFF8c
+Whether going up or down - 00FFFF88
+Whether pancake is going left or right (1 for left, 2 for right) - 00FFFF84
+
+jsr addresses for pancake updates
+
+00FFFFAC - Go from updatecake to game
+00FFFF10 - go from covercake to  continueupdatecake
+00FFFF06 - Go from checkcake to continueupdatecake
+00FFFF20 - go from xychecks back to covercake

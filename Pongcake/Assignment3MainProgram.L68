@@ -1,0 +1,1419 @@
+003BE114 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 10/26/2022 10:27:42 AM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Pongcake - Assembly Game
+00000000                             3  * Written by : Gabrielle Tristani
+00000000                             4  * Date       : 10/17/2022
+00000000                             5  * Description: A basic game written entirely in Assembly, using Easy68K. It is called "Pongcake". The game uses a variety of other, larger files that it accesses via
+00000000                             6  * Include statements. These files are specialized for specific puroses and documented fully. The game opens with a start screen, waits for the user to press space to begin,
+00000000                             7  * and then spawns them into a scene where they can control a frying pan with the left and right arrow keys. The goal is to catch an always-moving pancake as it accelerates to the ground.
+00000000                             8  * The player can do this by pressing the left and right arrow keys to move in the target direction, but is stopped at either wall of the application. The player must try to go beneath the cake.
+00000000                             9  * When struck by the player, the pancake gains upward velocity and randomly generated x velocity, and then falls back down for the player to hit again. The pancake can bounce off of the left
+00000000                            10  * and right walls as well. Every time the cake is hit, the score counter provided by a seven-segment LED system is incremented by one, up to the final value 999. When the player loses, they
+00000000                            11  * are brought back to the title screen to try again. The game uses a bitmap background that redraws segments of itself when entities move across it to give the impression of a fully static
+00000000                            12  * background. The game also includes a sound effect when the player collides with the pancake, the game begins, and the game is lost, as well as constant background music.
+00000000                            13  *-----------------------------------------------------------
+00001000                            14      ORG    $1000 
+00001000  =00000050                 15  PenColor   equ     80 ;Initializes trap command variables for ease of use in program
+00001000  =00000051                 16  FillColor  equ     81
+00001000  =00000057                 17  DrawRec     equ     87
+00001000                            18  
+00001000  =00000025                 19  Left equ $25 ;Variables for player movement direction
+00001000  =00000027                 20  Right equ $27
+00001000                            21  
+00001000  =00000013                 22  UserInput equ 19
+00001000                            23  
+00001000  =00000016                 24  PlayerWidth     equ 22 ;Variables for player size
+00001000  =0000000B                 25  PlayerHeight    equ 11
+00001000                            26  
+00001000  =00000012                 27  PancakeWidth equ 18 ;Variables for pancake size
+00001000  =00000005                 28  PancakeHeight equ 5
+00001000                            29  
+00001000  =00000226                 30  PlayerY         equ 550 ;Saves player y position
+00001000                            31  
+00001000  =005A5A5A                 32  PlayerColor equ $005a5a5a ;Saves color data for players and pancake
+00001000  =0033CED7                 33  OutlineColor equ $0033CED7
+00001000  =005491CE                 34  PancakeColor equ $005491CE
+00001000  =00C94072                 35  PancakeOutline equ $00C94072
+00001000                            36      
+00001000                            37  bitmap:
+00001000                            38      INCBIN "SimpleKitchenBackground.bmp" ;Loads in the bitmap file    
+001DF878                            39  startMap:
+001DF878                            40      INCBIN "PancakeStart.bmp" ;Loads in start screen file
+003BE0F0                            41  
+003BE0F0                            42  Lose:
+003BE0F0  123C 0001                 43       move.b #1,d1 ;Play dropped sound effect
+003BE0F4  7048                      44       move.l #72,d0
+003BE0F6  4E4F                      45       TRAP #15 
+003BE0F8                            46       
+003BE0F8  4FF9 00FFFFA0             47      lea $00FFFFA0,sp ;Checks if y acceleration was initialized, otherwise, going to start.
+003BE0FE  0C97 00000031             48      cmp.l #49,(sp)
+003BE104  6600 000E                 49      bne Start
+003BE108                            50       
+003BE108  4FF9 00FFFFD4             51      lea $00FFFFD4, sp 
+003BE10E  2EBC 00000001             52      move.l #1,(sp) ;Force program to reinitalize score for next round
+003BE114                            53  
+003BE114                            54  Start: ;Here, we include a file which presents the title screen, waits for the user to start, and initializes entity values
+003BE114                            55      
+003BE114                            56      INCLUDE 'BeginningStates.X68'
+003BE114                            57  FirstTimeCheck: ;Checks if this is the first time the game has booted, if so, loading in sounds, and otherwise skipping it
+003BE114  4FF9 00FFFFD4             58      lea $00FFFFD4,sp
+003BE11A  0C97 00000001             59      cmp.l #1,(sp)
+003BE120  6700 0042                 60      beq DrawingTitle
+003BE124                            61      
+003BE124                            62  LoadInSound:
+003BE124  43F9 003BEDE3             63       lea backgroundMusic,a1 ;Loads in title screen music
+003BE12A  7200                      64       move.l #0,d1
+003BE12C  704A                      65       move.l #74,d0
+003BE12E  4E4F                      66       TRAP #15
+003BE130                            67         
+003BE130  43F9 003BEDF7             68       lea pancakeFlip,a1 ;Loads in pancake flip sound effect
+003BE136  7200                      69       move.l #0,d1
+003BE138  7047                      70       move.l #71,d0
+003BE13A  4E4F                      71       TRAP #15  
+003BE13C                            72       
+003BE13C  43F9 003BEDD0             73       lea pancakeDropped,a1 ;Loads in loss sound effect
+003BE142  7201                      74       move.l #1,d1
+003BE144  7047                      75       move.l #71,d0
+003BE146  4E4F                      76       TRAP #15  
+003BE148                            77       
+003BE148  43F9 003BEE07             78       lea pancakeFall,a1 ;Loads in game start sound effect
+003BE14E  7202                      79       move.l #2,d1
+003BE150  7047                      80       move.l #71,d0
+003BE152  4E4F                      81       TRAP #15
+003BE154                            82  
+003BE154                            83  FirstTime: ;First function, used to draw the start screen. Includes bitmap drawing function.
+003BE154  705C                      84      move.l #92,d0 ;Sets double buffer mode
+003BE156  7211                      85      move.l #17,d1
+003BE158  4E4F                      86      TRAP #15
+003BE15A                            87      
+003BE15A  123C 0000                 88       move.b #0,d1 ;Play title screen music loop
+003BE15E  7401                      89       move.l #1,d2
+003BE160  704D                      90       move.l #77,d0
+003BE162  4E4F                      91       TRAP #15
+003BE164                            92  
+003BE164                            93  DrawingTitle:
+003BE164  4FF9 01000000             94      lea $01000000,sp
+003BE16A  41F9 001DF878             95      lea startMap,a0
+003BE170                            96      INCLUDE 'BitmapDrawer.X68'
+003BE170                            97  
+003BE170                            98  SetWindow:
+003BE170                            99          ;Change output window to match desired dimensions
+003BE170  4FF9 00FFFFA0            100          lea $00FFFFA0,sp ;Checks if y acceleration was initialized, otherwise, going to start without adjusting window dimensions
+003BE176  0C97 00000031            101          cmp.l #49,(sp)
+003BE17C  6700 013E                102          beq DrawTitle
+003BE180                           103      
+003BE180  7200                     104          move.l #0,d1
+003BE182  7000                     105          move.l #0,d0
+003BE184                           106          
+003BE184  223C 000002BC            107          move.l #700, d1
+003BE18A  E189                     108          lsl.l #8, d1
+003BE18C  E189                     109          lsl.l #8, d1 
+003BE18E  0681 000002BC            110          add.l #700, d1
+003BE194  7021                     111          move.l #33, d0
+003BE196  4E4F                     112          trap #15
+003BE198                           113          
+003BE198  0C97 00000031            114          cmp.l #49,(sp)
+003BE19E  6600 011C                115          bne DrawTitle
+003BE1A2                           116  
+003BE1A2                           117  CreatePixelArrayValues:  
+003BE1A2  2008                     118          move.l a0, d0 ;Creates placeholder for pixel array address in d0
+003BE1A4  0658 0000                119          add.w #0, (a0)+ ;skips through header to parse information
+003BE1A8  0698 00000000            120          add.l #0, (a0)+
+003BE1AE  0698 00000000            121          add.l #0, (a0)+
+003BE1B4  D010                     122          add.b (a0),d0   ;saves pointer to pixel data to d0
+003BE1B6                           123          
+003BE1B6  2040                     124          move.l d0,a0
+003BE1B8                           125          
+003BE1B8  243C 000002BB            126          move.l #699,d2 ;Starting y value
+003BE1BE  7600                     127          move.l #0,d3
+003BE1C0  283C 000002BB            128          move.l #699,d4
+003BE1C6  7A01                     129          move.l #1,d5
+003BE1C8  2C3C 000002BC            130          move.l #700,d6
+003BE1CE  2E3C 000002BB            131          move.l #699,d7
+003BE1D4                           132          
+003BE1D4  4FF9 00FFFF24            133          lea $00FFFF24,sp
+003BE1DA  4EB9 003BE206            134          jsr XYChecks
+003BE1E0                           135          
+003BE1E0  4FF9 00FFFFD8            136          lea $00FFFFD8,sp
+003BE1E6  4E75                     137          rts   
+003BE1E8                           138             
+003BE1E8                           139  InitialY:
+003BE1E8  4FF9 00FFFFE0            140      lea $00FFFFE0,sp
+003BE1EE                           141      
+003BE1EE  2017                     142      move.l (sp),d0 ;Loads number of pixels per row into d0, multiplies by 4 to get bytes per row
+003BE1F0  C0FC 0004                143      mulu.w #4,d0
+003BE1F4                           144      
+003BE1F4  2204                     145      move.l d4,d1 ;Moves d4 to d1 to have d1 carry difference between initial y value and current y value, how many rows must be traversed
+003BE1F6  9287                     146      sub.l d7,d1
+003BE1F8                           147      
+003BE1F8  C0C1                     148      mulu.w d1,d0 ;Multiplies number of rows by bytes per row
+003BE1FA                           149      
+003BE1FA  D1C0                     150      add.l d0,a0 ;Increments a0 to get to right position
+003BE1FC                           151      
+003BE1FC  2807                     152      move.l d7,d4 ;Initializes d4 properly
+003BE1FE                           153      
+003BE1FE  BE84                     154      cmp.l d4,d7
+003BE200                           155      
+003BE200  4FF9 00FFFFD4            156      lea $00FFFFD4,sp
+003BE206                           157      
+003BE206                           158  XYChecks:
+003BE206  BE84                     159      cmp.l d4,d7 ;Checks if starting y has been reached yet, branching to InitialY to initialize if not
+003BE208  6DDE                     160      blt InitialY
+003BE20A                           161      
+003BE20A  2E7C 00FFFFFC            162      move.l #$00FFFFFC,sp
+003BE210                           163      
+003BE210  BA97                     164      cmp.l (sp),d5 ;Checks if current x value is at least one greater than leftmost x value, otherwise branching to ChangeXPlus
+003BE212  6D00 0050                165      blt ChangeXPlus
+003BE216                           166      
+003BE216  BC85                     167      cmp.l d5,d6 ;Check to make sure current x value does not exceed rightmost x value, else branching to ChangeXMinus
+003BE218  6D00 0068                168      blt ChangeXMinus
+003BE21C                           169      
+003BE21C                           170  DrawPixel:
+003BE21C  4FF9 00FFFF20            171      lea $00FFFF20,sp
+003BE222                           172      
+003BE222                           173      ;Grabs and operates on pixel color value
+003BE222  2210                     174      move.l (a0),d1
+003BE224  123C 0000                175      move.b #00, d1 ;Zeroes out the junk data to be in correct format
+003BE228                           176      
+003BE228  E159                     177      rol.w #8, d1
+003BE22A  E199                     178      rol.l #8, d1
+003BE22C  4841                     179      swap.w d1
+003BE22E  E199                     180      rol.l #8, d1
+003BE230  E159                     181      rol.w #8, d1
+003BE232  E099                     182      ror.l #8, d1 ;leaves us with 00BBGGRR, meaning pen color is set for pixel color
+003BE234                           183      
+003BE234  103C 0050                184      move.b #80, d0
+003BE238  4E4F                     185      TRAP #15 ;Sets pen color
+003BE23A                           186      
+003BE23A  3203                     187      move.w d3, d1 ;Sets coordinate in x for pixel, with y pixel coordinate already in d2
+003BE23C  103C 0052                188      move.b #82, d0 ;Draws pixel
+003BE240  4E4F                     189      TRAP #15
+003BE242                           190      
+003BE242  5283                     191      add.l #1, d3 ;Increments the x counter for output window
+003BE244  5285                     192      add.l #1, d5 ;Increments x counter for bitmap traversal
+003BE246                           193      
+003BE246  0698 00000000            194      add.l #0, (A0)+ ;Increments a0 to get to next value
+003BE24C                           195     
+003BE24C  BC45                     196      cmp d5,d6 ;If curent x is greater than maximum x, we can check to see if the same is true for y and every pixel is printed.
+003BE24E  6CB6                     197      bge XYChecks
+003BE250                           198      
+003BE250                           199      ;To check y, we want to see if its less than the top left corner y
+003BE250  2E7C 00FFFFF8            200      move.l #$00FFFFF8,sp
+003BE256  2017                     201      move.l (sp),d0
+003BE258  4FF9 00FFFF20            202      lea $00FFFF20,sp
+003BE25E                           203      
+003BE25E  B044                     204      cmp d4,d0 ;Compares current y to highest row, if not equal, repeats XYChecks. Otherwise returns
+003BE260  6DA4                     205      blt XYChecks
+003BE262  4E75                     206      rts
+003BE264                           207      
+003BE264                           208  ChangeXPlus:
+003BE264  2017                     209      move.l (sp),d0 ;puts the leftmost x value into d0
+003BE266  9085                     210      sub.l d5,d0 ;Subtracts current x value from the leftmost x value to get difference between the two, how many spaces a0 needs to increment
+003BE268                           211      
+003BE268  5280                     212      add.l #1,d0
+003BE26A  2A17                     213      move.l (sp),d5 ;set d5 to proper leftmost value
+003BE26C                           214      
+003BE26C  5285                     215      add.l #1,d5
+003BE26E  C0FC 0004                216      mulu.w #4,d0 ;Multiplies by bytes per pixel
+003BE272                           217      
+003BE272  D1C0                     218      add.l d0, A0 ;Increments the address value to right location
+003BE274                           219      
+003BE274  4FF9 00FFFF20            220      lea $00FFFF20,sp
+003BE27A                           221      
+003BE27A  BABC 00000000            222      cmp.l #0,d5
+003BE280  6C84                     223      bge XYChecks
+003BE282                           224      
+003BE282                           225  ChangeXMinus:
+003BE282                           226     ;Since current x has surpassed the rightmost x value, address should be incremented by the total bitmap width - chunk width 
+003BE282                           227      
+003BE282  2E7C 00FFFFE0            228      move.l #$00FFFFE0,sp
+003BE288                           229      
+003BE288  2017                     230      move.l (sp),d0 ;Saves bitmap width to d0
+003BE28A                           231      
+003BE28A  2E7C 00FFFFF4            232      move.l #$00FFFFF4,sp
+003BE290  9097                     233      sub.l (sp),d0 ;Subtracts chunk width from d0
+003BE292                           234      
+003BE292  5384                     235      sub.l #1, d4 ;Decrements y values as well to change to new row logically and in chunk
+003BE294  5382                     236      sub.l #1,d2
+003BE296                           237  
+003BE296  2E7C 00FFFFEC            238      move.l #$00FFFFEC,sp
+003BE29C                           239      
+003BE29C  2617                     240      move.l (sp),d3 ;Resets current x values to be leftmost values
+003BE29E                           241  
+003BE29E  2E7C 00FFFFFC            242      move.l #$00FFFFFC,sp
+003BE2A4                           243      
+003BE2A4  2A17                     244      move.l (sp),d5 ;Sets to leftmost x value on output window logically
+003BE2A6  5285                     245      add.l #1,d5
+003BE2A8                           246      
+003BE2A8  4FF9 00FFFF20            247      lea $00FFFF20,sp
+003BE2AE  C0FC 0004                248      mulu.w #4,d0
+003BE2B2                           249      
+003BE2B2  D1C0                     250      add.l d0,a0 ;Increments a0 to proper address index
+003BE2B4                           251      
+003BE2B4  BC85                     252      cmp.l d5,d6
+003BE2B6  6C00 FF4E                253      bge XYChecks
+003BE2BA                           254      
+003BE2BA  4E75                     255      rts
+003BE2BC                           256      
+003BE2BC                           257  DrawTitle:
+003BE2BC  4FF9 01000000            258          lea $01000000,sp
+003BE2C2  2008                     259          move.l a0, d0 ;Creates placeholder for pixel array address in d0
+003BE2C4  0658 0000                260          add.w #0, (a0)+ ;skips through header to parse information
+003BE2C8  0698 00000000            261          add.l #0, (a0)+
+003BE2CE  0698 00000000            262          add.l #0, (a0)+
+003BE2D4  D010                     263          add.b (a0),d0   ;saves pointer to pixel data to d0
+003BE2D6                           264          
+003BE2D6  2040                     265          move.l d0,a0
+003BE2D8                           266          
+003BE2D8                           267          ;Now, we can load in the bitmap and establish relevant stack variables
+003BE2D8  2F3C 00000000            268          move.l #0, -(sp) ;Add top left x value. (00FFFFFC)
+003BE2DE  2F3C 00000000            269          move.l #0,-(sp) ;Add top left y value. (00FFFFF8)
+003BE2E4  2F3C 000002BC            270          move.l #700, -(sp) ;Add width of chunk.(00FFFFF4)        
+003BE2EA  2F3C 000002BC            271          move.l #700, -(sp) ;Add height of chunk. (00FFFFF0)
+003BE2F0  2F3C 00000000            272          move.l #0, -(sp) ;Add top left x value on output screen. (00FFFFEC)
+003BE2F6  2F3C 00000000            273          move.l #0, -(sp) ;Add top left y value on output screen.(00FFFFE8)
+003BE2FC                           274          
+003BE2FC  2F3C 00000000            275          move.l #0, -(sp) ;Add dummy stack variable as buffer space (00FFFFE4)
+003BE302  2F3C 000002BC            276          move.l #700,-(sp) ;Create new index in stack to store total width of bitmap. (00FFFFE0)
+003BE308  2F3C 000002BC            277          move.l #700,-(sp) ;Create new index in stack to store total height of bitmap. (00FFFFDC)
+003BE30E                           278          
+003BE30E  2008                     279          move.l a0, d0 ;Creates placeholder for pixel array address in d0
+003BE310  0658 0000                280          add.w #0, (a0)+ ;skips through header to parse information
+003BE314  0698 00000000            281          add.l #0, (a0)+
+003BE31A  0698 00000000            282          add.l #0, (a0)+
+003BE320  D010                     283          add.b (a0),d0   ;saves pointer to pixel data to d0
+003BE322                           284          
+003BE322  2040                     285          move.l d0,a0
+003BE324                           286          
+003BE324  243C 000002BB            287          move.l #699,d2 ;Initializes starting data register values to properly fit title
+003BE32A  7600                     288          move.l #0,d3
+003BE32C  283C 000002BB            289          move.l #699,d4
+003BE332  7A01                     290          move.l #1,d5
+003BE334  2C3C 000002BC            291          move.l #700,d6
+003BE33A  2E3C 000002BB            292          move.l #699,d7
+003BE340                           293          
+003BE340  4FF9 00FFFF24            294          lea $00FFFF24,sp
+003BE346                           295          
+003BE346  4EB9 003BE206            296          jsr XYChecks     ;Checks that x and y are at proper positions before printing pixels, repeating until no pixels are left, then exiting
+003BE34C                           297      
+003BE34C                           298  Exit: ;Releases program from execution
+003BE34C                           299  
+003BE34C                           300  
+003BE34C                           301  
+003BE34C                           302  
+003BE34C                           303  -------------------- end include --------------------
+003BE34C  705E                     304      move.l #94,d0 ;Loads the start screen ONLY after fully loaded
+003BE34E  4E4F                     305      TRAP #15
+003BE350                           306      
+003BE350                           307  WaitToBegin: ;Imposes a wait on the start screen until the user presses the spacebar
+003BE350  7005                     308      move.l #5,d0
+003BE352  4E4F                     309      TRAP #15
+003BE354                           310      
+003BE354  B23C 0020                311      cmp.b #32,d1 ;Checks that user input (if received) was in fact the spacebar
+003BE358  66F6                     312      bne WaitToBegin
+003BE35A                           313  
+003BE35A                           314  ResetStack: ;Sets stack to draw new bitmap background for the scene, which should stay consistent for gameplay with moving entities.
+003BE35A  123C 0000                315       move.b #0,d1 ;Play pancake hit sound effect to let player know game is about to start
+003BE35E  7048                     316       move.l #72,d0
+003BE360  4E4F                     317       TRAP #15 
+003BE362                           318       
+003BE362  41F8 1000                319      lea bitmap,a0 ;Sets proper bitmap image
+003BE366                           320      
+003BE366                           321      ;Initializes stack values to match specifications of bitmap size and start/end points
+003BE366  4FF9 00FFFFFC            322      lea $00FFFFFC,sp
+003BE36C  2EBC 00000000            323      move.l #0,(sp)
+003BE372  2F3C 00000096            324      move.l #150,-(sp)
+003BE378  2F3C 000002BC            325      move.l #700,-(sp)
+003BE37E  2F3C 00000226            326      move.l #550,-(sp)
+003BE384  2F3C 00000000            327      move.l #0,-(sp)
+003BE38A  2F3C 00000096            328      move.l #150,-(sp)
+003BE390                           329      
+003BE390  4FF9 00FFFFE4            330      lea $00FFFFE4,sp
+003BE396  2F3C 000002BC            331      move.l #700,-(sp)
+003BE39C  2F3C 000002BC            332      move.l #700,-(sp)
+003BE3A2                           333  
+003BE3A2  4EB9 003BE1A2            334      jsr CreatePixelArrayValues ;Jumps to portion to reset data register values and reprint array
+003BE3A8                           335      
+003BE3A8  4FF9 00FFFFDC            336      lea $00FFFFDC,sp
+003BE3AE                           337      
+003BE3AE                           338      INCLUDE 'D:\FIEA Class Notes\Programming Fundamentals\Assignment3\SevenSegmentLEDFunctionTable.X68'
+003BE3AE                           339  
+003BE3AE                           340  StartOfLED: ;This is used to wipe the top section of the screen to be cleared for the score bar display
+003BE3AE  7050                     341      move.l #80, d0
+003BE3B0  7200                     342      move.l #$00000000, d1 ;Set pen color to black
+003BE3B2  4E4F                     343      TRAP #15
+003BE3B4                           344      
+003BE3B4  7051                     345      move.l #81, d0
+003BE3B6  7200                     346      move.l #$00000000, d1 ;Set fill color to black
+003BE3B8  4E4F                     347      TRAP #15
+003BE3BA                           348      
+003BE3BA  7057                     349      move.l #87,d0 ;Wipes current score bar by drawing a solid black rectangle over the top
+003BE3BC  323C 0000                350      move.w #0, d1
+003BE3C0  343C 0000                351      move.w #0, d2
+003BE3C4  363C 02BC                352      move.w #700, d3
+003BE3C8  383C 0096                353      move.w #150, d4
+003BE3CC  4E4F                     354      TRAP #15
+003BE3CE                           355      
+003BE3CE  4EF9 003BE6E8            356      jmp Finish ;Goes to Finish afterwards, as clearing this segment is all that needs to happen to start the program
+003BE3D4                           357      
+003BE3D4                           358  SetValues:  ;Function used to determine which digit is to be printed and where, based on current hundreds, tens, or ones value.
+003BE3D4  264F                     359      move.l sp,a3
+003BE3D6  DFFC 0000009C            360      add.l #156,sp
+003BE3DC                           361      
+003BE3DC  2A17                     362      move.l (sp),d5 ;Current value is saved in d5
+003BE3DE                           363      
+003BE3DE  BABC 0000000A            364      cmp.l #10,d5 ;Ensures digit falls within a single digit value, zeroing it and incrementing the digit of the next highest order by one otherwise
+003BE3E4  6D00 0010                365      blt GetPrintTableIndex ;Skips ahead if the digit is valid
+003BE3E8                           366      
+003BE3E8                           367  ZeroValue: ;Function used to zero a value and increment that of the next order
+003BE3E8  2EBC 00000000            368      move.l #0,(sp)
+003BE3EE                           369  
+003BE3EE  588F                     370      add.l #4,sp ;Moves to next value in stack, incrementing by one. This would be tens or hundreds digit
+003BE3F0  5297                     371      add.l #1,(sp)
+003BE3F2  598F                     372      sub.l #4,sp
+003BE3F4                           373  
+003BE3F4  7A00                     374      move.l #0,d5 ;We also zero the value that should be equivalent to the pixel being operated on
+003BE3F6                           375      
+003BE3F6                           376  GetPrintTableIndex:
+003BE3F6  DFFC 0000000C            377      add.l #12,sp ;number of pixels incremented from base value for target digit is saved to d6
+003BE3FC  2C17                     378      move.l (sp),d6
+003BE3FE                           379      
+003BE3FE  41F9 003BE6C0            380      lea PrintTable,a0 ;We load PrintTable into a0, then pointer to address of function that prints value we want to print into d1
+003BE404                           381      
+003BE404  CAFC 0004                382      mulu.w #4,d5 ;Multiplies d5 by 4 and adds to d1, used to provide number of spaces that should be incremented in a0 for proper digit
+003BE408  2205                     383      move.l d5,d1
+003BE40A  8AFC 0004                384      divu.w #4,d5
+003BE40E                           385      
+003BE40E  2070 1000                386      move.l (a0,d1),a0
+003BE412                           387      
+003BE412                           388  CyclingValues:
+003BE412  2410                     389      move.l (a0),d2 ;Moves the segment to be printed into d2
+003BE414                           390      
+003BE414  5888                     391      add.l #4,a0 ;goes to next index
+003BE416                           392      
+003BE416  B4BC 00000000            393      cmp.l #0,d2 ;As long as the value is not 0, we still have more segments to pring
+003BE41C  6700 000C                394      beq EndCycle ;get out if 0 is set here
+003BE420                           395      
+003BE420  2242                     396      move.l d2,a1 ;We jump to correct segment print function
+003BE422  4FF9 00FFFF64            397      lea $00FFFF64,sp
+003BE428  4E91                     398      jsr (a1)
+003BE42A                           399      
+003BE42A                           400  EndCycle:
+003BE42A  B4BC 00000000            401      cmp.l #0,d2
+003BE430  66E0                     402      bne CyclingValues
+003BE432                           403      
+003BE432  2E4B                     404      move.l a3,sp
+003BE434  4E75                     405      rts
+003BE436                           406      
+003BE436                           407  SegmentA:
+003BE436  7057                     408      move.l #87,d0 ;Draws A segment then returns to CyclingValues
+003BE438  323C 0005                409      move.w #5, d1
+003BE43C  D286                     410      add.l d6,d1
+003BE43E  343C 0000                411      move.w #0, d2
+003BE442  363C 0019                412      move.w #25, d3
+003BE446  D686                     413      add.l d6,d3
+003BE448  383C 0005                414      move.w #5, d4
+003BE44C  4E4F                     415      TRAP #15
+003BE44E                           416      
+003BE44E  4E75                     417      rts
+003BE450                           418      
+003BE450                           419  SegmentB:
+003BE450  7057                     420      move.l #87,d0 ;Draws B segment then returns to CyclingValues
+003BE452  323C 0019                421      move.w #25, d1
+003BE456  D286                     422      add.l d6,d1
+003BE458  343C 0005                423      move.w #5, d2
+003BE45C  363C 001E                424      move.w #30, d3
+003BE460  D686                     425      add.l d6,d3
+003BE462  383C 0019                426      move.w #25, d4
+003BE466  4E4F                     427      TRAP #15
+003BE468                           428      
+003BE468  4E75                     429      rts
+003BE46A                           430      
+003BE46A                           431  SegmentC:
+003BE46A  7057                     432      move.l #87,d0 ;Draws C segment then returns to CyclingValues
+003BE46C  323C 0019                433      move.w #25, d1
+003BE470  D286                     434      add.l d6,d1
+003BE472  343C 001E                435      move.w #30, d2
+003BE476  363C 001E                436      move.w #30, d3
+003BE47A  D686                     437      add.l d6,d3
+003BE47C  383C 0032                438      move.w #50, d4
+003BE480  4E4F                     439      TRAP #15
+003BE482                           440      
+003BE482  4E75                     441      rts
+003BE484                           442      
+003BE484                           443  SegmentD:
+003BE484  7057                     444      move.l #87,d0 ;Draws D segment then returns to CyclingValues
+003BE486  323C 0005                445      move.w #5, d1
+003BE48A  D286                     446      add.l d6,d1
+003BE48C  343C 0032                447      move.w #50, d2
+003BE490  363C 0019                448      move.w #25, d3
+003BE494  D686                     449      add.l d6,d3
+003BE496  383C 0037                450      move.w #55, d4
+003BE49A  4E4F                     451      TRAP #15
+003BE49C                           452      
+003BE49C  4E75                     453      rts
+003BE49E                           454      
+003BE49E                           455  SegmentE:
+003BE49E  7057                     456      move.l #87,d0 ;Draws E segment then returns to CyclingValues
+003BE4A0  323C 0000                457      move.w #0, d1
+003BE4A4  D286                     458      add.l d6,d1
+003BE4A6  343C 001E                459      move.w #30, d2
+003BE4AA  363C 0005                460      move.w #5, d3
+003BE4AE  D686                     461      add.l d6,d3
+003BE4B0  383C 0032                462      move.w #50, d4
+003BE4B4  4E4F                     463      TRAP #15
+003BE4B6                           464      
+003BE4B6  4E75                     465      rts
+003BE4B8                           466      
+003BE4B8                           467  SegmentF:
+003BE4B8  7057                     468      move.l #87,d0 ;Draws F segment then returns to CyclingValues
+003BE4BA  323C 0000                469      move.w #0, d1
+003BE4BE  D286                     470      add.l d6,d1
+003BE4C0  343C 0005                471      move.w #5, d2
+003BE4C4  363C 0005                472      move.w #5, d3
+003BE4C8  D686                     473      add.l d6,d3
+003BE4CA  383C 0019                474      move.w #25, d4
+003BE4CE  4E4F                     475      TRAP #15
+003BE4D0                           476      
+003BE4D0  4E75                     477      rts
+003BE4D2                           478      
+003BE4D2                           479  SegmentG:
+003BE4D2  7057                     480      move.l #87,d0 ;Draws G segment then returns to CyclingValues
+003BE4D4  323C 0005                481      move.w #5, d1
+003BE4D8  D286                     482      add.l d6,d1
+003BE4DA  343C 0019                483      move.w #25, d2
+003BE4DE  363C 0019                484      move.w #25, d3
+003BE4E2  D686                     485      add.l d6,d3
+003BE4E4  383C 001E                486      move.w #30, d4
+003BE4E8  4E4F                     487      TRAP #15 
+003BE4EA                           488      
+003BE4EA  4E75                     489      rts  
+003BE4EC                           490      
+003BE4EC                           491  AddScore:
+003BE4EC  4FF9 00FFFFC8            492      lea $00FFFFC8, sp ;Grab current hundreds to see if its 9, continuing to check other values if so
+003BE4F2  0C97 00000009            493      cmp.l #9,(sp)
+003BE4F8  6600 0022                494      bne Valid
+003BE4FC                           495      
+003BE4FC  06A7 00000000            496      add.l #0,-(sp) ;Grab current tens to see if its 9, continuing to check other values if so
+003BE502  0C97 00000009            497      cmp.l #9,(sp)
+003BE508  6600 0012                498      bne Valid
+003BE50C                           499      
+003BE50C  06A7 00000000            500      add.l #0,-(sp) ;Grab current ones to see if its 9, stopping addition to the score if 999 is reached
+003BE512  0C97 00000009            501      cmp.l #9,(sp)
+003BE518  6700 00B0                502      beq GameLoop
+003BE51C                           503         
+003BE51C                           504  Valid:
+003BE51C  4FF9 00FFFFC0            505      lea $00FFFFC0,sp ;grab current ones value and increments by one since an add has been requested
+003BE522  5297                     506      add.l #1,(sp)
+003BE524                           507      
+003BE524  7050                     508      move.l #80, d0
+003BE526  7200                     509      move.l #$00000000, d1 ;Set pen color to black
+003BE528  4E4F                     510      TRAP #15
+003BE52A                           511      
+003BE52A  7051                     512      move.l #81, d0
+003BE52C  7200                     513      move.l #$00000000, d1 ;Set fill color to black
+003BE52E  4E4F                     514      TRAP #15
+003BE530                           515      
+003BE530  7057                     516      move.l #87,d0 ;Wipes current score bar
+003BE532  323C 0000                517      move.w #0, d1
+003BE536  343C 0000                518      move.w #0, d2
+003BE53A  363C 02BC                519      move.w #700, d3
+003BE53E  383C 0078                520      move.w #120, d4
+003BE542  4E4F                     521      TRAP #15
+003BE544                           522      
+003BE544  7050                     523      move.l #80, d0
+003BE546  223C 0000FF00            524      move.l #$0000FF00, d1 ;Set pen color to green
+003BE54C  4E4F                     525      TRAP #15
+003BE54E                           526      
+003BE54E  7051                     527      move.l #81, d0
+003BE550  223C 0000FF00            528      move.l #$0000FF00, d1 ;Set fill color to green
+003BE556  4E4F                     529      TRAP #15
+003BE558                           530      
+003BE558                           531  ScoreInitializer:
+003BE558  4FF9 00FFFFD4            532      lea $00FFFFD4, sp 
+003BE55E  0C97 00000000            533      cmp.l #0,(sp) ;if value has already been initialized (hundreds digit distance from left of screen is set to 0), we can just go to PrintScore
+003BE564  6700 0040                534      beq PrintScore
+003BE568                           535                  
+003BE568  4FF9 00FFFFD8            536      lea $00FFFFD8,sp
+003BE56E  7050                     537      move.l #80, d0
+003BE570  223C 0000FF00            538      move.l #$0000FF00, d1 ;Set pen color to green
+003BE576  4E4F                     539      TRAP #15
+003BE578                           540      
+003BE578  7051                     541      move.l #81, d0
+003BE57A  223C 0000FF00            542      move.l #$0000FF00, d1 ;Set fill color to green
+003BE580  4E4F                     543      TRAP #15
+003BE582                           544      
+003BE582                           545      ;Begins value initialization for this program
+003BE582  2F3C 00000000            546      move.l #0,-(sp) ;How many pixels are incremented from base value for hundreds digit FFD4
+003BE588  2F3C 00000046            547      move.l #70,-(sp) ;How many pixels are incremented from base value for tens digit FFD0
+003BE58E  2F3C 0000008C            548      move.l #140,-(sp) ; Pixels incremented from base value for ones digit FFCC
+003BE594  2F3C 00000000            549      move.l #0,-(sp) ;Curren hundreds value FFC8
+003BE59A  2F3C 00000000            550      move.l #0,-(sp) ;Current tens value FFC4
+003BE5A0  2F3C 00000000            551      move.l #0,-(sp) ;Current ones value FFC0
+003BE5A6                           552      
+003BE5A6                           553  PrintScore:
+003BE5A6  4FF9 00FFFF28            554      lea $00FFFF28,sp ;Prints the ones digit
+003BE5AC  4EB9 003BE3D4            555      jsr SetValues
+003BE5B2                           556      
+003BE5B2  4FF9 00FFFF2C            557      lea $00FFFF2C,sp ;Prints the tens digit
+003BE5B8  4EB9 003BE3D4            558      jsr SetValues
+003BE5BE                           559      
+003BE5BE  4FF9 00FFFF30            560      lea $00FFFF30,sp ;Prints the hundreds digit
+003BE5C4  4EB9 003BE3D4            561      jsr SetValues
+003BE5CA                           562      
+003BE5CA                           563  GameLoop:
+003BE5CA  7051                     564      move.l #81, d0
+003BE5CC  7200                     565      move.l #$00000000, d1 ;Set fill color to black and then returns to program
+003BE5CE  4E4F                     566      TRAP #15
+003BE5D0                           567      
+003BE5D0  4FF9 00FFFFD8            568      lea $00FFFFD8,sp
+003BE5D6  4E75                     569      rts
+003BE5D8                           570  
+003BE5D8                           571  SegmentFunctionTable: ;Function pointer table that has references to the ordered list of function to print any given digit
+003BE5D8                           572                  ZeroPrint:
+003BE5D8= 003BE436 003BE450 ...    573                      dc.l SegmentA, SegmentB, SegmentC, SegmentD, SegmentE, SegmentF,0 ;References segments used to print 0
+003BE5F4                           574                  OnePrint:
+003BE5F4= 003BE450 003BE46A ...    575                      dc.l SegmentB,SegmentC,0 ;References segments used to print 1
+003BE600                           576                  TwoPrint:
+003BE600= 003BE436 003BE450 ...    577                      dc.l SegmentA,SegmentB, SegmentD, SegmentE, SegmentG,0 ;References segments used to print 2
+003BE618                           578                  ThreePrint:
+003BE618= 003BE436 003BE450 ...    579                      dc.l SegmentA,SegmentB,SegmentC,SegmentD,SegmentG,0 ;References segments used to print 3
+003BE630                           580                  FourPrint:
+003BE630= 003BE450 003BE46A ...    581                      dc.l SegmentB,SegmentC,SegmentF,SegmentG,0 ;References segments used to print 4
+003BE644                           582                  FivePrint:
+003BE644= 003BE436 003BE46A ...    583                      dc.l SegmentA,SegmentC,SegmentD,SegmentG,SegmentF,0 ;References segments used to print 5
+003BE65C                           584                  SixPrint:
+003BE65C= 003BE436 003BE46A ...    585                      dc.l SegmentA,SegmentC,SegmentD,SegmentE,SegmentF,SegmentG,0 ;References segments used to print 6
+003BE678                           586                  SevenPrint:
+003BE678= 003BE436 003BE450 ...    587                      dc.l SegmentA,SegmentB,SegmentC,0 ;References segments used to print 7
+003BE688                           588                  EightPrint:
+003BE688= 003BE436 003BE450 ...    589                      dc.l SegmentA,SegmentB,SegmentC,SegmentD,SegmentE,SegmentF,SegmentG,0 ;References segments used to print 8
+003BE6A8                           590                  NinePrint:
+003BE6A8= 003BE436 003BE450 ...    591                      dc.l SegmentA,SegmentB,SegmentC,SegmentF,SegmentG,0 ;References segments used to print 9
+003BE6C0                           592                  
+003BE6C0                           593  PrintTable: ;A table that contains references to each of the number printer routines, with each index correlating to the digit printed
+003BE6C0= 003BE5D8 003BE5F4 ...    594                  dc.l ZeroPrint,OnePrint,TwoPrint,ThreePrint,FourPrint,FivePrint,SixPrint,SevenPrint,EightPrint,NinePrint
+003BE6E8                           595                  
+003BE6E8                           596  Finish:
+003BE6E8                           597  
+003BE6E8                           598  
+003BE6E8                           599  -------------------- end include --------------------
+003BE6E8  4EB9 003BE558            600          jsr ScoreInitializer ;Includes and calls seven segment LED counter with proper starting point in stack
+003BE6EE                           601      
+003BE6EE  2E7C 00FFFFBC            602      move.l #$00FFFFBC,sp ;Reset stack pointer
+003BE6F4                           603  
+003BE6F4  2F3C 0000015E            604      move.l #350,-(sp) ;Saves x coordinate for frying pan to stack
+003BE6FA                           605      
+003BE6FA  4FF9 00FFFFDC            606      lea $00FFFFDC,sp ;Goes on to draw the player frying pan
+003BE700  4EB9 003BE894            607      jsr DrawRectanglePlayer
+003BE706                           608      
+003BE706                           609  InitializeCake: ;Initializes pancake and calls function to draw it onscreen 
+003BE706  4FF9 00FFFFA8            610      lea $00FFFFA8,sp
+003BE70C  2EBC 00000000            611      move.l #0,(sp)
+003BE712  2F3C 00000000            612      move.l #0,-(sp)
+003BE718                           613      
+003BE718  2F3C 00000031            614      move.l #49,-(sp) ;Saves 25 to y acceleration so this can be converted to -.25 pixels per .04 seconds, simulates gravity acting at about -9.8 / -10 pixels per 1.6 seconds
+003BE71E                           615      
+003BE71E  2F3C 0000015E            616      move.l #350,-(sp) ;Set x position to 350
+003BE724                           617  
+003BE724  2F3C 00000096            618      move.l #150,-(sp) ;Set y position to 150
+003BE72A                           619      
+003BE72A  2F3C 00000000            620      move.l #0,-(sp) ;Initializes several pancake variables to 0
+003BE730  2F3C 00000000            621      move.l #0,-(sp)
+003BE736  2F3C 00000000            622      move.l #0,-(sp)
+003BE73C  2F3C 00000000            623      move.l #0,-(sp)
+003BE742  2F3C 00000000            624      move.l #0,-(sp)
+003BE748                           625      
+003BE748  4FF9 00FFFF9C            626      lea $00FFFF9C,sp ;Puts proper value in d5 (x position of pancake) for draw rectangle trap command to be called
+003BE74E  2A17                     627      move.l (sp),d5
+003BE750  4FF9 00FFFF14            628      lea $00FFFF14,sp
+003BE756  4EB9 003BE860            629      jsr DrawRectanglePancake
+003BE75C                           630  
+003BE75C                           631  
+003BE75C                           632  
+003BE75C                           633  
+003BE75C                           634  
+003BE75C                           635  
+003BE75C                           636  
+003BE75C                           637  
+003BE75C                           638  -------------------- end include --------------------
+003BE75C                           639      
+003BE75C                           640  PancakeFallingSound:
+003BE75C  123C 0002                641       move.b #2,d1 ;Play dropped sound effect
+003BE760  7048                     642       move.l #72,d0
+003BE762  4E4F                     643       TRAP #15 
+003BE764                           644      
+003BE764                           645  Game:   
+003BE764  203C 00FFFF98            646      move.l #$00FFFF98,d0 ;Update for the pancake
+003BE76A  4FF9 00FFFFB0            647      lea $00FFFFB0,sp
+003BE770  4EB9 003BE7C6            648      jsr UpdateCake
+003BE776                           649      
+003BE776  4FF9 00FFFFB4            650      lea $00FFFFB4,sp ;Update for the player
+003BE77C  4EB9 003BE792            651      jsr UpdatePlayer
+003BE782                           652      
+003BE782  705E                     653      move.l #94,d0
+003BE784  4E4F                     654      TRAP #15
+003BE786                           655      
+003BE786  7201                     656      move.l #1,d1 ;1/100 second delay, or .01 seconds
+003BE788  7017                     657      move.l #23,d0
+003BE78A  4E4F                     658      TRAP #15
+003BE78C                           659      
+003BE78C  4EF9 003BE764            660      jmp Game
+003BE792                           661  
+003BE792                           662  UpdatePlayer: ;Collects right and left arrow key player input, branching to target move functions if received
+003BE792  7227                     663      move.l #Right,d1
+003BE794  7013                     664      move.l #UserInput,d0
+003BE796  4E4F                     665      TRAP #15
+003BE798  0281 000000FF            666      andi.l #$FF,d1
+003BE79E  6600 05C8                667      bne MoveRight
+003BE7A2                           668      
+003BE7A2  7225                     669      move.l #Left,d1
+003BE7A4  7013                     670      move.l #UserInput,d0
+003BE7A6  4E4F                     671      TRAP #15
+003BE7A8  0281 000000FF            672      andi.l #$FF,d1
+003BE7AE  6600 05F6                673      bne MoveLeft
+003BE7B2                           674      
+003BE7B2  4FF9 00FFFFDC            675      lea $00FFFFDC,sp ;Draws the player in their current position and then returns to game
+003BE7B8  4EB9 003BE894            676      jsr DrawRectanglePlayer
+003BE7BE                           677      
+003BE7BE  2E7C 00FFFFB0            678      move.l #$00FFFFB0,sp   
+003BE7C4  4E75                     679      rts
+003BE7C6                           680      
+003BE7C6                           681  UpdateCake:   
+003BE7C6  2E40                     682      move.l d0,sp ;Set proper address and move y position of current cake to d0
+003BE7C8  2017                     683      move.l (sp),d0
+003BE7CA                           684  
+003BE7CA  4FF9 00FFFF88            685      lea $00FFFF88,sp
+003BE7D0  2217                     686      move.l (sp),d1 ;Grabs up or down value. if going up (greater than 0), we want to keep executing
+003BE7D2                           687  
+003BE7D2  B2BC 00000000            688      cmp.l #0,d1
+003BE7D8  6600 0016                689      bne ContinueUpdateCake
+003BE7DC                           690          
+003BE7DC  B0BC 00000226            691      cmp.l #PlayerY,d0 ;Check to ensure it hasn't fallen offscreen
+003BE7E2  6E00 F90C                692      bgt Lose
+003BE7E6                           693      
+003BE7E6  B0BC 00000000            694      cmp.l #0,d0 ;Ensure pancake is valid and in scene
+003BE7EC  6700 F902                695      beq Lose
+003BE7F0                           696  
+003BE7F0                           697  ContinueUpdateCake: ;Updates the pancake's position and the bitmap beneath it
+003BE7F0  4FF9 00FFFF14            698      lea $00FFFF14,sp
+003BE7F6  4EB9 003BE808            699      jsr CoverCake
+003BE7FC                           700      
+003BE7FC  4FF9 00FFFF10            701      lea $00FFFF10,sp
+003BE802  4EB9 003BEC74            702      jsr CheckCake
+003BE808                           703      
+003BE808                           704  CoverCake: ;Periodically reprints the bitmap image over the space the pancake used to occupy
+003BE808  4FF9 00FFFFDC            705      lea $00FFFFDC,sp
+003BE80E  4EB9 003BE944            706      jsr SetCakeBitmap
+003BE814  4FF9 00FFFF10            707      lea $00FFFF10,sp
+003BE81A  4E75                     708      rts
+003BE81C                           709      
+003BE81C                           710  DrawTheCake: ;Draws the pancake in its new location as a rectangle
+003BE81C  4FF9 00FFFF9C            711      lea $00FFFF9C,sp
+003BE822  2A17                     712      move.l (sp),d5
+003BE824                           713      
+003BE824  4FF9 00FFFF14            714      lea $00FFFF14,sp
+003BE82A  4EB9 003BE860            715      jsr DrawRectanglePancake
+003BE830                           716      
+003BE830  4FF9 00FFFFAC            717      lea $00FFFFAC,sp ;Return back to calling function
+003BE836  4E75                     718      rts
+003BE838                           719  
+003BE838                           720  DrawPlayer:     ;Draws the player in their new position based on previously collected player input
+003BE838  4FF9 00FFFFE8            721      lea $00FFFFE8,sp
+003BE83E  4EB9 003BE8DC            722      jsr SetPlayerBitmap
+003BE844                           723      
+003BE844  4FF9 00FFFFDC            724      lea $00FFFFDC,sp
+003BE84A  4EB9 003BE894            725      jsr DrawRectanglePlayer
+003BE850                           726      
+003BE850  2E7C 00FFFFB0            727      move.l #$00FFFFB0,sp
+003BE856  4E75                     728      rts
+003BE858                           729      
+003BE858                           730  BackToGame:  
+003BE858  2E7C 00FFFFB0            731      move.l #$00FFFFB0,sp
+003BE85E  4E75                     732      rts
+003BE860                           733      
+003BE860                           734      INCLUDE 'DrawFunctions.X68' ;Functions that draw pancake and player on the screen
+003BE860                           735  
+003BE860                           736  DrawRectanglePancake: ;Function that draws pancake as a rectangle in new position on the screen
+003BE860  7051                     737      move.l #FillColor, d0
+003BE862  223C 005491CE            738      move.l #PancakeColor,d1
+003BE868  4E4F                     739      TRAP #15
+003BE86A                           740      
+003BE86A  7050                     741      move.l #PenColor, d0
+003BE86C  223C 00C94072            742      move.l #PancakeOutline,d1
+003BE872  4E4F                     743      TRAP #15 
+003BE874                           744          
+003BE874  7057                     745      move.l #DrawRec,d0
+003BE876  2205                     746      move.l d5,d1
+003BE878  0681 00000012            747      add.l #PancakeWidth,d1
+003BE87E                           748      
+003BE87E  2605                     749      move.l d5,d3
+003BE880  0483 00000012            750      sub.l #PancakeWidth,d3
+003BE886                           751      
+003BE886  2802                     752      move.l d2,d4
+003BE888  5A84                     753      add.l #PancakeHeight,d4
+003BE88A                           754      
+003BE88A  4E4F                     755      TRAP #15
+003BE88C                           756      
+003BE88C  4FF9 00FFFF10            757      lea $00FFFF10,sp
+003BE892  4E75                     758      rts
+003BE894                           759      
+003BE894                           760  DrawRectanglePlayer: ;Function that draws player as a rectangle in new position on the screen
+003BE894  4FF9 00FFFFB8            761      lea $00FFFFB8,sp
+003BE89A                           762      
+003BE89A  7050                     763      move.l #PenColor,d0
+003BE89C  223C 0033CED7            764      move.l #OutlineColor,d1
+003BE8A2  4E4F                     765      TRAP #15
+003BE8A4                           766  
+003BE8A4  7051                     767      move.l #FillColor,d0
+003BE8A6  223C 005A5A5A            768      move.l #PlayerColor,d1
+003BE8AC  4E4F                     769      TRAP #15
+003BE8AE                           770      
+003BE8AE  7057                     771      move.l #DrawRec,d0
+003BE8B0  2217                     772      move.l (sp),d1
+003BE8B2  0681 00000016            773      add.l #PlayerWidth,d1
+003BE8B8                           774      
+003BE8B8  243C 00000226            775      move.l #PlayerY,d2
+003BE8BE                           776      
+003BE8BE  2617                     777      move.l (sp),d3
+003BE8C0  0483 00000016            778      sub.l #PlayerWidth,d3
+003BE8C6                           779      
+003BE8C6  283C 00000226            780      move.l #PlayerY,d4
+003BE8CC  0684 0000000B            781      add.l #PlayerHeight,d4
+003BE8D2  4E4F                     782      TRAP #15
+003BE8D4                           783      
+003BE8D4  4FF9 00FFFFD8            784      lea $00FFFFD8,sp
+003BE8DA  4E75                     785      rts
+003BE8DC                           786      
+003BE8DC                           787  SetPlayerBitmap: ;Sets variables to define the bitmap portion to cover the player's previous position
+003BE8DC  2E7C 01000000            788      move.l #$01000000,sp ;Goes back to relevant player data section of the stack
+003BE8E2                           789      
+003BE8E2  2F00                     790      move.l d0,-(sp) ;Moves leftmost value occupied by player into top left x value for bitmap
+003BE8E4  2F3C 00000226            791      move.l #PlayerY,-(sp) ;Moves topmost y value of player to top left y value for bitmap
+003BE8EA                           792      
+003BE8EA  2F3C 00000016            793      move.l #PlayerWidth,-(sp)
+003BE8F0  0697 00000016            794      add.l #PlayerWidth,(sp)  ;Sets width of chunk to draw to 2 * player's width 
+003BE8F6  5297                     795      add.l #1,(sp)
+003BE8F8  2F3C 0000000B            796      move.l #PlayerHeight,-(sp) ;Sets height of chunk to player's height
+003BE8FE                           797      
+003BE8FE  2F00                     798      move.l d0,-(sp) ;Sets top left x value on output screen to top left x for bitmap
+003BE900  2F3C 00000226            799      move.l #PlayerY,-(sp) ;Sets top left y value on output screen to top left y for bitmap
+003BE906                           800      
+003BE906  740B                     801      move.l #PlayerHeight,d2 ;Starting y value
+003BE908  0682 00000226            802      add.l #PlayerY,d2
+003BE90E                           803      
+003BE90E  2600                     804      move.l d0,d3
+003BE910                           805      
+003BE910  283C 000002BB            806      move.l #699,d4
+003BE916  7A01                     807      move.l #1,d5
+003BE918                           808      
+003BE918  2C00                     809      move.l d0,d6
+003BE91A  0686 00000016            810      add.l #PlayerWidth,d6
+003BE920  0686 00000016            811      add.l #PlayerWidth,d6
+003BE926  5286                     812      add.l #1,d6
+003BE928                           813      
+003BE928  7E0B                     814      move.l #PlayerHeight,d7
+003BE92A  0687 00000226            815      add.l #PlayerY,d7
+003BE930                           816      
+003BE930  4FF9 00FFFFDC            817      lea $00FFFFDC,sp
+003BE936  4EB9 003BE998            818      jsr LoadCover
+003BE93C                           819      
+003BE93C  4FF9 00FFFFE4            820      lea $00FFFFE4,sp
+003BE942  4E75                     821      rts
+003BE944                           822  
+003BE944                           823  SetCakeBitmap: ;Sets variables to define the bitmap portion to cover the pancake's previous position
+003BE944  4FF9 00FFFF9C            824      lea $00FFFF9C,sp
+003BE94A  264F                     825      move.l sp,A3
+003BE94C  2017                     826      move.l (sp),d0
+003BE94E                           827  
+003BE94E  0480 00000012            828      sub.l #PancakeWidth,d0 ;save leftmost value of pancake 1 to d0
+003BE954                           829      
+003BE954  2227                     830      move.l -(sp),d1 ;Save bottom height of pancake 1 to d0
+003BE956                           831      
+003BE956  2E7C 01000000            832      move.l #$01000000,sp ;Goes back to relevant player data section of the stack
+003BE95C                           833      
+003BE95C  2F00                     834      move.l d0,-(sp) ;Moves leftmost value occupied by player into top left x value for bitmap
+003BE95E  2F01                     835      move.l d1,-(sp) ;Moves topmost y value of player to top left y value for bitmap
+003BE960                           836      
+003BE960  2F3C 00000012            837      move.l #PancakeWidth,-(sp)
+003BE966  0697 00000012            838      add.l #PancakeWidth,(sp)  ;Sets width of chunk to draw to 2 * pancake's width 
+003BE96C  5297                     839      add.l #1,(sp)
+003BE96E  2F3C 00000005            840      move.l #PancakeHeight,-(sp) ;Sets height of chunk to pancake's height
+003BE974                           841      
+003BE974  2F00                     842      move.l d0,-(sp) ;Sets top left x value on output screen to top left x for bitmap
+003BE976  2F01                     843      move.l d1,-(sp) ;Sets top left y value on output screen to top left y for bitmap
+003BE978                           844      
+003BE978  7E05                     845      move.l #PancakeHeight,d7
+003BE97A                           846      
+003BE97A  DE82                     847      add.l d2,d7
+003BE97C                           848      
+003BE97C  5A82                     849      add.l #PancakeHeight,d2 ;Starting y value
+003BE97E                           850      
+003BE97E  2600                     851      move.l d0,d3
+003BE980                           852      
+003BE980  283C 000002BB            853      move.l #699,d4
+003BE986  7A01                     854      move.l #1,d5
+003BE988                           855      
+003BE988  2C00                     856      move.l d0,d6
+003BE98A  0686 00000012            857      add.l #PancakeWidth,d6
+003BE990  0686 00000012            858      add.l #PancakeWidth,d6
+003BE996  5286                     859      add.l #1,d6
+003BE998                           860  
+003BE998                           861  LoadCover: ;Loads the bitmap portion to cover previous position of entity based on previously entered values in SetCakeBitmap or SetPlayerBitmap
+003BE998  2E7C 00FFFF24            862      move.l #$00FFFF24,sp
+003BE99E  41F8 1000                863      lea bitmap,a0    ;load the address of the bitmap into a0
+003BE9A2                           864      
+003BE9A2  3008                     865      move.w a0, d0 ;Creates placeholder for pixel array address in d0
+003BE9A4  0658 0000                866      add.w #0, (a0)+ ;skips through header to parse information
+003BE9A8  0698 00000000            867      add.l #0, (a0)+
+003BE9AE  0698 00000000            868      add.l #0, (a0)+
+003BE9B4  D010                     869      add.b (a0),d0   ;saves pointer to pixel data to d0
+003BE9B6                           870          
+003BE9B6  2040                     871      move.l d0,a0
+003BE9B8                           872  
+003BE9B8  4EB9 003BE206            873      jsr XYChecks
+003BE9BE  4FF9 00FFFFD8            874      lea $00FFFFD8,sp
+003BE9C4  4E75                     875      rts
+003BE9C6                           876  
+003BE9C6                           877  
+003BE9C6                           878  
+003BE9C6                           879  -------------------- end include --------------------
+003BE9C6                           880      INCLUDE 'RandomFunctions.X68' ;Functions that generate random data
+003BE9C6                           881  ALL_REG                 REG     D0-D7/A0-A6
+003BE9C6  =00000008                882  GET_TIME_COMMAND        equ     8
+003BE9C6                           883      
+003BE9C6                           884  SetRandomNumber:
+003BE9C6  4EB9 003BEA0C            885          jsr     seedRandomNumber ;Starts by seeding a random number to begin operating with
+003BE9CC  4286                     886      clr.l   d6
+003BE9CE  4EB9 003BEA24            887          jsr     getRandomByteIntoD6 ;Calls the subroutine getRandomByteIntoD6 6 times, then getRandomLongIntoD6 once, making all 8 bytes random values
+003BE9D4  4286                     888      clr.l   d6
+003BE9D6  4EB9 003BEA24            889          jsr     getRandomByteIntoD6
+003BE9DC  4286                     890      clr.l   d6
+003BE9DE  4EB9 003BEA24            891          jsr     getRandomByteIntoD6
+003BE9E4  4286                     892      clr.l   d6
+003BE9E6  4EB9 003BEA24            893          jsr     getRandomByteIntoD6
+003BE9EC  4286                     894      clr.l   d6
+003BE9EE  4EB9 003BEA24            895          jsr     getRandomByteIntoD6
+003BE9F4  4286                     896      clr.l   d6
+003BE9F6  4EB9 003BEA24            897          jsr     getRandomByteIntoD6
+003BE9FC  4286                     898      clr.l   d6
+003BE9FE  4EB9 003BEA5E            899          jsr     getRandomLongIntoD6
+003BEA04                           900          
+003BEA04  4FF9 00FFFF60            901          lea $00FFFF60,sp ;Returns to calling function with random value stored in d6
+003BEA0A  4E75                     902          rts
+003BEA0C                           903  
+003BEA0C                           904  seedRandomNumber
+003BEA0C  48E7 FFFE                905          movem.l ALL_REG,-(sp) ;Moves contents of registers into the stack
+003BEA10  4286                     906          clr.l   d6
+003BEA12                           907          
+003BEA12  103C 0008                908          move.b  #GET_TIME_COMMAND,d0 ;Gets the time and stores the result inside of d1, then moving it to the RandomVal variable
+003BEA16  4E4F                     909          TRAP    #15
+003BEA18  23C1 003BEA9A            910          move.l  d1,RANDOMVAL
+003BEA1E                           911          
+003BEA1E  4CDF 7FFF                912          movem.l (sp)+,ALL_REG ;Puts stack pointer back at the top of the stack to reaccess the rts value to return to SetRandomNumber
+003BEA22  4E75                     913          rts
+003BEA24                           914  getRandomByteIntoD6 
+003BEA24  48E7 8000                915          movem.l d0,-(sp) ;Stores d0, d1, and d2 to next positions on the stack
+003BEA28  48E7 4000                916          movem.l d1,-(sp)
+003BEA2C  48E7 2000                917          movem.l d2,-(sp)
+003BEA30                           918          
+003BEA30  2039 003BEA9A            919          move.l  RANDOMVAL,d0 ;Moves randomly calculated value into d0, then stores $AF and $100 in d1 and #18 in d2
+003BEA36  72AF                     920          moveq   #$AF-$100,d1
+003BEA38  7412                     921          moveq   #18,d2
+003BEA3A                           922          
+003BEA3A                           923  Ninc0   
+003BEA3A  D080                     924      add.l   d0,d0 ;Doubles the random value stored in d0, then branches to Ninc1 immediately if there's no carry bit.
+003BEA3C  6400 0004                925      bcc Ninc1     ;Otherwise, performs XOR on d1 and d0 then falls into ninc1 function.
+003BEA40  B300                     926      eor.b   d1,d0
+003BEA42                           927      
+003BEA42                           928  Ninc1
+003BEA42  51CA FFF6                929      dbf d2,Ninc0 ;Goes back to loop Ninc0 if d2 > 1, decrementing d2 by one in the process. If this makes d2 = -1, execution continues, otherwise branching back to ninc0
+003BEA46                           930      
+003BEA46  23C0 003BEA9A            931      move.l  d0,RANDOMVAL ;Moves d0 to Randomval, then moves a byte of it into the now empty d6
+003BEA4C  4286                     932      clr.l   d6
+003BEA4E  1C00                     933      move.b  d0,d6
+003BEA50                           934      
+003BEA50  4CDF 0004                935      movem.l (sp)+,d2 ;Puts stack pointer where it was prior to getRandomByteIntoD6 execution and resets d2 d1 and d0 to initial values, then returns to calling funciton
+003BEA54  4CDF 0002                936      movem.l (sp)+,d1
+003BEA58  4CDF 0001                937      movem.l (sp)+,d0
+003BEA5C  4E75                     938      rts
+003BEA5E                           939          
+003BEA5E                           940  getRandomLongIntoD6
+003BEA5E  48E7 FFFE                941      movem.l ALL_REG,-(sp) ;Adds all register values to stack
+003BEA62  4EB9 003BEA24            942      jsr     getRandomByteIntoD6 ;Calls getRandomByteIntoD6 4 times, each time moving the next data byte calculated into d5, stored in order generated via shifting commands
+003BEA68  1A06                     943      move.b  d6,d5
+003BEA6A  4EB9 003BEA24            944      jsr     getRandomByteIntoD6
+003BEA70  E18D                     945      lsl.l   #8,d5
+003BEA72  1A06                     946      move.b  d6,d5
+003BEA74  4EB9 003BEA24            947      jsr     getRandomByteIntoD6
+003BEA7A  E18D                     948      lsl.l   #8,d5
+003BEA7C  1A06                     949      move.b  d6,d5
+003BEA7E  4EB9 003BEA24            950      jsr     getRandomByteIntoD6
+003BEA84  E18D                     951      lsl.l   #8,d5
+003BEA86  1A06                     952      move.b  d6,d5
+003BEA88                           953      
+003BEA88  23C5 003BEA9E            954      move.l  d5,TEMPRANDOMLONG ;Moves d5 into TempRandomLong, then resets all register values and moves random value into d6.
+003BEA8E  4CDF 7FFF                955      movem.l (sp)+,ALL_REG
+003BEA92  2C39 003BEA9E            956      move.l  TEMPRANDOMLONG,d6
+003BEA98  4E75                     957      rts
+003BEA9A                           958  
+003BEA9A                           959  RANDOMVAL       ds.l    1
+003BEA9E                           960  TEMPRANDOMLONG  ds.l    1
+003BEAA2                           961  
+003BEAA2                           962  
+003BEAA2                           963  -------------------- end include --------------------
+003BEAA2                           964      INCLUDE 'PancakeMovement.X68' ;Functions that control pancake movement
+003BEAA2                           965  MovingRight:   
+003BEAA2  2EBC 00000002            966      move.l #2,(sp) ;Sets pancake to moving right
+003BEAA8                           967  
+003BEAA8                           968  MovingLeft:
+003BEAA8  0C97 00000000            969      cmp.l #0,(sp)
+003BEAAE  6600 0008                970      bne UpOrDown
+003BEAB2  2EBC 00000001            971      move.l #1,(sp) ;Sets pancake to move left, as long as it is not already moving right, then dropping into MoveCake
+003BEAB8                           972      
+003BEAB8                           973  UpOrDown:  
+003BEAB8  4FF9 00FFFF88            974      lea $00FFFF88,sp ;Grabs value indicating whether pancake is going up or down, branching to GoUp if it is moving up, or dropping to GoDown otherwise   
+003BEABE  0C97 00000000            975      cmp.l #0,(sp)
+003BEAC4  6600 0090                976      bne GoUp
+003BEAC8                           977      
+003BEAC8                           978  GoDown: ;Has the pancake continue falling downward
+003BEAC8  4FF9 00FFFF74            979      lea $00FFFF74,sp
+003BEACE  4EB9 003BEC52            980      jsr VerticalData
+003BEAD4  4FF9 00FFFF84            981      lea $00FFFF84,sp
+003BEADA                           982      
+003BEADA  0C97 00000001            983      cmp.l #1,(sp)
+003BEAE0  6700 0050                984      beq LeftDown
+003BEAE4  0C97 00000000            985      cmp.l #0,(sp)
+003BEAEA  6700 0046                986      beq LeftDown
+003BEAEE                           987  
+003BEAEE                           988  SwitchToRightDown:
+003BEAEE  4FF9 00FFFF84            989      lea $00FFFF84,sp ;Sets pancake to head right and down
+003BEAF4  2EBC 00000002            990      move.l #2,(sp)
+003BEAFA                           991  
+003BEAFA                           992  RightDown:
+003BEAFA  4FF9 00FFFF74            993      lea $00FFFF74,sp
+003BEB00  4EB9 003BEC02            994      jsr MoveDown
+003BEB06                           995      
+003BEB06  4FF9 00FFFF9C            996      lea $00FFFF9C,sp
+003BEB0C  D697                     997      add.l (sp),d3
+003BEB0E  B6BC 000002BC            998      cmp.l #700,d3 ;But before moving right, we need to ensure that new x < 700 (right wall), and switch to moving left otherwise.
+003BEB14  6C00 0010                999      bge SwitchToLeftDown ;We need to go left instead.
+003BEB18                          1000      
+003BEB18  D397                    1001      add.l d1,(sp) ;Adds x velocity to x position value to get new location
+003BEB1A  4FF9 00FFFFC0           1002      lea $00FFFFC0,sp ;Jumps to subroutine that will actually draw pancake onscreen
+003BEB20  4EB9 003BE81C           1003      jsr DrawTheCake
+003BEB26                          1004  
+003BEB26                          1005  SwitchToLeftDown:
+003BEB26  4FF9 00FFFF84           1006      lea $00FFFF84,sp ;Switches pancake to moving left and downwards if pancake is no longer moving right or up
+003BEB2C  2EBC 00000001           1007      move.l #1,(sp)
+003BEB32                          1008      
+003BEB32                          1009  LeftDown:  
+003BEB32  4FF9 00FFFF74           1010      lea $00FFFF74,sp
+003BEB38  4EB9 003BEC02           1011      jsr MoveDown
+003BEB3E                          1012      
+003BEB3E  4FF9 00FFFF9C           1013      lea $00FFFF9C,sp
+003BEB44  B697                    1014      cmp.l (sp),d3 ;But before moving left, we need to ensure that d3 < the current x to ensure it doesnt hit wall.
+003BEB46  6CA6                    1015      bge SwitchToRightDown ;We need to go right instead otherwise.
+003BEB48                          1016      
+003BEB48  9397                    1017      sub.l d1,(sp) ;Gets new x value if it is value and stores in stack
+003BEB4A                          1018  
+003BEB4A  4FF9 00FFFFC0           1019      lea $00FFFFC0,sp ;Goes to actually draw pancake entity
+003BEB50  4EB9 003BE81C           1020      jsr DrawTheCake
+003BEB56                          1021      
+003BEB56                          1022  GoUp:
+003BEB56  4FF9 00FFFF88           1023      lea $00FFFF88,sp
+003BEB5C  5397                    1024      sub.l #1,(sp) ;Decrements number of spaces we will continue moving upwards by one since we're moving up again here
+003BEB5E                          1025      
+003BEB5E  4FF9 00FFFF74           1026      lea $00FFFF74,sp
+003BEB64  4EB9 003BEC52           1027      jsr VerticalData
+003BEB6A                          1028      
+003BEB6A  4FF9 00FFFF84           1029      lea $00FFFF84,sp
+003BEB70  0C97 00000001           1030      cmp.l #1,(sp) ;Checks if we're moving left, otherwise dropping into function SwitchToRightUp
+003BEB76  6700 0046               1031      beq LeftUp
+003BEB7A                          1032  
+003BEB7A                          1033  SwitchToRightUp:
+003BEB7A  4FF9 00FFFF84           1034      lea $00FFFF84,sp ;Sets pancake to moving in the right direction
+003BEB80  2EBC 00000002           1035      move.l #2,(sp)
+003BEB86                          1036      
+003BEB86                          1037  RightUp:
+003BEB86  4FF9 00FFFF74           1038      lea $00FFFF74,sp
+003BEB8C  4EB9 003BEBE2           1039      jsr MoveUp
+003BEB92                          1040      
+003BEB92  4FF9 00FFFF9C           1041      lea $00FFFF9C,sp
+003BEB98  D697                    1042      add.l (sp),d3
+003BEB9A                          1043       
+003BEB9A  B6BC 000002BC           1044      cmp.l #700,d3 ;But before moving right, we need to ensure that d3 < 700 to ensure it doesnt hit wall.
+003BEBA0  6C00 0010               1045      bge SwitchToLeftUp ;We need to go left instead otherwise.
+003BEBA4                          1046      
+003BEBA4  D397                    1047      add.l d1,(sp) ;If valid, adds displacement to current x position value  
+003BEBA6  4FF9 00FFFFC0           1048      lea $00FFFFC0,sp
+003BEBAC  4EB9 003BE81C           1049      jsr DrawTheCake
+003BEBB2                          1050      
+003BEBB2                          1051  SwitchToLeftUp:
+003BEBB2  4FF9 00FFFF84           1052      lea $00FFFF84,sp
+003BEBB8  2EBC 00000001           1053      move.l #1,(sp)
+003BEBBE                          1054      
+003BEBBE                          1055  LeftUp:
+003BEBBE  4FF9 00FFFF74           1056      lea $00FFFF74,sp
+003BEBC4  4EB9 003BEBE2           1057      jsr MoveUp
+003BEBCA                          1058      
+003BEBCA  4FF9 00FFFF9C           1059      lea $00FFFF9C,sp
+003BEBD0                          1060       
+003BEBD0  B697                    1061      cmp.l (sp),d3 ;But before moving left, we need to ensure that d1 < the current x to ensure it doesnt hit wall.
+003BEBD2  6EA6                    1062      bgt SwitchToRightUp ;We need to go right instead.
+003BEBD4                          1063      
+003BEBD4  9397                    1064      sub.l d1,(sp)
+003BEBD6                          1065      
+003BEBD6  4FF9 00FFFFC0           1066      lea $00FFFFC0,sp ;Goes to function to actually draw pancake onscreen
+003BEBDC  4EB9 003BE81C           1067      jsr DrawTheCake
+003BEBE2                          1068      
+003BEBE2                          1069  MoveUp:
+003BEBE2  4FF9 00FFFF7C           1070      lea $00FFFF7C,sp ;Repeats shared segments for pancake movement
+003BEBE8  4EB9 003BEC22           1071      jsr SharedMovement
+003BEBEE  4FF9 00FFFF98           1072      lea $00FFFF98,sp
+003BEBF4                          1073      
+003BEBF4  9197                    1074      sub.l d0,(sp) ;Gets new y value by subtracting acceleration
+003BEBF6                          1075        
+003BEBF6  4FF9 00FFFF7C           1076      lea $00FFFF7C,sp
+003BEBFC  4EB9 003BEC36           1077      jsr SharedEnding
+003BEC02                          1078      
+003BEC02                          1079  MoveDown:
+003BEC02  4FF9 00FFFF7C           1080      lea $00FFFF7C,sp ;Repeats shared segments for pancake movement
+003BEC08  4EB9 003BEC22           1081      jsr SharedMovement
+003BEC0E  4FF9 00FFFF98           1082      lea $00FFFF98,sp
+003BEC14                          1083      
+003BEC14  D197                    1084      add.l d0,(sp) ;Changes y position by adding our calculated acceleration   
+003BEC16                          1085      
+003BEC16  4FF9 00FFFF7C           1086      lea $00FFFF7C,sp
+003BEC1C  4EB9 003BEC36           1087      jsr SharedEnding
+003BEC22                          1088      
+003BEC22                          1089  SharedMovement:
+003BEC22                          1090      ;Grabs y velocity and adds y acceleration
+003BEC22  4FF9 00FFFFA4           1091      lea $00FFFFA4,sp
+003BEC28  D197                    1092      add.l d0,(sp)
+003BEC2A  2017                    1093      move.l (sp),d0
+003BEC2C                          1094      
+003BEC2C  EC88                    1095      lsr.l #6,d0 ;Shifts to get rid of decimal remainder, we now have the number of spaces traversed vertically
+003BEC2E  4FF9 00FFFF78           1096      lea $00FFFF78,sp
+003BEC34  4E75                    1097      rts
+003BEC36                          1098      
+003BEC36                          1099  SharedEnding:
+003BEC36  4FF9 00FFFF98           1100      lea $00FFFF98,sp
+003BEC3C  2417                    1101      move.l (sp),d2 ;Moves y position into d2 for drawing rectangle
+003BEC3E                          1102      
+003BEC3E  E889                    1103      lsr.l #4,d1 ;Shifts x velocity right by 4 bits since we are dealing with decimal values
+003BEC40  069F 00000000           1104      add.l #0,(sp)+ ;Grabs x position
+003BEC46                          1105      
+003BEC46  7612                    1106      move.l #PancakeWidth,d3 ;Moves width of cake plus x veloctiy plus current x into d3 to get rightmost value of new cake
+003BEC48  D681                    1107      add.l d1,d3
+003BEC4A                          1108      
+003BEC4A  4FF9 00FFFF70           1109      lea $00FFFF70,sp
+003BEC50  4E75                    1110      rts
+003BEC52                          1111      
+003BEC52                          1112  VerticalData:
+003BEC52  4FF9 00FFFFA0           1113      lea $00FFFFA0,sp
+003BEC58  2017                    1114      move.l (sp),d0 ;Saves acceleration to d0
+003BEC5A                          1115      
+003BEC5A  4FF9 00FFFFA8           1116      lea $00FFFFA8,sp
+003BEC60  2217                    1117      move.l (sp),d1 ;moves x velocity into d1
+003BEC62                          1118      
+003BEC62  4FF9 00FFFF70           1119      lea $00FFFF70,sp
+003BEC68  4E75                    1120      rts
+003BEC6A                          1121  
+003BEC6A                          1122  
+003BEC6A                          1123  
+003BEC6A                          1124  -------------------- end include --------------------
+003BEC6A                          1125      INCLUDE 'PancakeCollisionChecks.X68' ;Functions that control pancake collisions
+003BEC6A                          1126  LargerD4:
+003BEC6A  9883                    1127      sub.l d3,d4
+003BEC6C  B882                    1128      cmp.l d2,d4
+003BEC6E  6E00 FE48               1129      bgt UpOrDown ;If difference is too far, keep moving normally
+003BEC72                          1130      
+003BEC72  7E12                    1131      move.l #18,d7 ;Sets d7 to 18 to show that we went through larger d4 and need to get to TouchingXs.
+003BEC74                          1132  
+003BEC74                          1133  CheckCake:
+003BEC74  BEBC 00000012           1134      cmp.l #18,d7 ;Checks if we came from dropping from LargerD4, if so, going to TouchingXs.
+003BEC7A  6700 0056               1135      beq TouchingXs
+003BEC7E                          1136      
+003BEC7E                          1137      ;If it moves, will it hit the pan?
+003BEC7E  7416                    1138      move.l #PlayerWidth,d2
+003BEC80  0682 00000012           1139      add.l #PancakeWidth,d2 ;Get difference between the sizes to see if they touch and if we should check y values for collision
+003BEC86                          1140      
+003BEC86                          1141      ;Loads X position of pancake into stack and then d3
+003BEC86  2E4B                    1142      move.l A3,sp
+003BEC88  2617                    1143      move.l (sp),d3 
+003BEC8A                          1144      
+003BEC8A  2E7C 00FFFFB8           1145      move.l #$00FFFFB8,sp ;Grabs player's x position and moves to d4
+003BEC90  2817                    1146      move.l (sp),d4
+003BEC92                          1147      
+003BEC92                          1148      ;Find if x velocity is positive or negative
+003BEC92  4FF9 00FFFF84           1149      lea $00FFFF84,sp
+003BEC98  0C97 00000002           1150      cmp.l #2,(sp)
+003BEC9E  6700 0010               1151      beq XVelocityRight
+003BECA2                          1152      
+003BECA2                          1153  XVelocityLeft:
+003BECA2  4FF9 00FFFFA8           1154      lea $00FFFFA8,sp
+003BECA8  2C17                    1155      move.l (sp),d6
+003BECAA  E88E                    1156      lsr.l #4,d6
+003BECAC  9686                    1157      sub.l d6,d3
+003BECAE                          1158      
+003BECAE                          1159      ;We want to subtract whichever is smaller (d3 or d4) from the larger one. So if we ran through VelocityLeft, we move sp to a5.
+003BECAE  2A4F                    1160      move.l sp,a5
+003BECB0                          1161  
+003BECB0                          1162  XVelocityRight:
+003BECB0  BACF                    1163      cmpa sp,a5 ;When we go into XVelocityRight, we immediately check if XVelocityLeft just ran. If so, we go into FindSmallerValue. Otherwise, we run the code below and drop into it after
+003BECB2  6600 000E               1164      bne FindSmallerValue
+003BECB6                          1165      
+003BECB6  4FF9 00FFFFA8           1166      lea $00FFFFA8,sp
+003BECBC  2C17                    1167      move.l (sp),d6
+003BECBE  E88E                    1168      lsr.l #4,d6
+003BECC0  D686                    1169      add.l d6,d3
+003BECC2                          1170      ;we need to add this velocity to get next point
+003BECC2                          1171  
+003BECC2                          1172  FindSmallerValue:   
+003BECC2  2A78 0000               1173      move.l 0,a5 ;Wipes our check address a5
+003BECC6                          1174      ;We want to subtract whichever is smaller (d3 or d4) from the larger one.
+003BECC6  B883                    1175      cmp.l d3,d4
+003BECC8  6EA0                    1176      bgt LargerD4
+003BECCA                          1177  
+003BECCA                          1178  SmallerD4:
+003BECCA  9684                    1179      sub.l d4,d3
+003BECCC  B682                    1180      cmp.l d2,d3
+003BECCE  6E00 FDE8               1181      bgt UpOrDown ;If difference is too far, keep moving normally
+003BECD2                          1182      
+003BECD2                          1183  TouchingXs:
+003BECD2  7E00                    1184      move.l #0,d7 ;Zeroes our check d7 since we have just gotten to TouchingXs.
+003BECD4                          1185      
+003BECD4  700B                    1186      move.l #PlayerHeight,d0 ;Gets sum of heights
+003BECD6  5A80                    1187      add.l #PancakeHeight,d0
+003BECD8                          1188      
+003BECD8  4FF9 00FFFFA0           1189      lea $00FFFFA0,sp
+003BECDE  2217                    1190      move.l (sp),d1
+003BECE0                          1191      
+003BECE0  069F 00000000           1192      add.l #0,(sp)+ ;Grabs y velocity and adds downward acceleration to d1 as well
+003BECE6  D297                    1193      add.l (sp),d1
+003BECE8                          1194      
+003BECE8  EC89                    1195      lsr.l #6,d1 ;Gets rid of remainder for spaces traveled
+003BECEA                          1196  
+003BECEA  4FF9 00FFFF98           1197      lea $00FFFF98,sp
+003BECF0  D297                    1198      add.l (sp),d1 ;Gets new anticipated y value
+003BECF2  D280                    1199      add.l d0,d1
+003BECF4                          1200      
+003BECF4  B2BC 00000226           1201      cmp.l #PlayerY,d1
+003BECFA  6D00 FDBC               1202      blt UpOrDown ;If the player's static y value is now higher up than the anticipated pancake y, then we know it hits and continue. otherwise, we keep moving it up or down
+003BECFE                          1203      
+003BECFE  4FF9 00FFFF88           1204      lea $00FFFF88,sp
+003BED04                          1205  
+003BED04  0C97 00000000           1206      cmp.l #0,(sp)
+003BED0A  6600 FDAC               1207      bne UpOrDown
+003BED0E                          1208      
+003BED0E                          1209  PancakeHit:  ;Called when pancake and pan collide
+003BED0E  2EBC 00000014           1210      move.l #20,(sp) ;Have pancake go up for 20 frames
+003BED14                          1211      
+003BED14  4FF9 00FFFFDC           1212      lea $00FFFFDC,sp ;Adds 1 in the score counter
+003BED1A  4EB9 003BE4EC           1213      jsr AddScore
+003BED20                          1214      
+003BED20  2E7C 00FFFF64           1215      move.l #$00FFFF64,sp ;Sets random number for x velocity, storing the value in d6
+003BED26  4EB9 003BE9C6           1216      jsr SetRandomNumber
+003BED2C                          1217      
+003BED2C  E08E                    1218      lsr.l #8,d6 ;Shifts left to get proper velocity since a full register of random data is unreasonable for velocity
+003BED2E  E08E                    1219      lsr.l #8,d6
+003BED30  E08E                    1220      lsr.l #8,d6
+003BED32                          1221      
+003BED32  4FF9 00FFFFA4           1222      lea $00FFFFA4,sp
+003BED38  2EFC 0000005A           1223      move.l #90,(sp)+ ;Sets y velocity to 100
+003BED3E  2E86                    1224      move.l d6,(sp) ;Sets x velocity randomly
+003BED40                          1225        
+003BED40  123C 0000               1226       move.b #0,d1 ;Play pancake hit sound effect
+003BED44  7048                    1227       move.l #72,d0
+003BED46  4E4F                    1228       TRAP #15 
+003BED48                          1229       
+003BED48  4FF9 00FFFF84           1230      lea $00FFFF84,sp
+003BED4E                          1231      
+003BED4E  2EBC 00000000           1232      move.l #0,(sp) ;Randomly selects whether movement is left or right based on value generated previously
+003BED54  BCBC 0000007F           1233      cmp.l #$7F,d6
+003BED5A  6E00 FD4C               1234      bgt MovingLeft
+003BED5E                          1235      
+003BED5E  BCBC 0000007F           1236      cmp.l #$7F,d6
+003BED64  6F00 FD3C               1237      ble MovingRight
+003BED68                          1238  
+003BED68                          1239  
+003BED68                          1240  
+003BED68                          1241  -------------------- end include --------------------
+003BED68                          1242      INCLUDE 'PlayerMovement.X68' ;Functions that control player movement
+003BED68                          1243  MoveRight: ;Moves the player right as long as that is a valid place to be
+003BED68  4FF9 00FFFFB8           1244      lea $00FFFFB8,sp
+003BED6E                          1245      ;Get the rightmost x value of the current position into d0
+003BED6E  2017                    1246      move.l (sp),d0
+003BED70  0680 00000016           1247      add.l #PlayerWidth,d0
+003BED76                          1248      
+003BED76  243C 000002BC           1249      move.l #700, d2
+003BED7C  0482 00000016           1250      sub.l #PlayerWidth, d2
+003BED82                          1251      
+003BED82  B082                    1252      cmp.l d2,d0 ;Makes sure that it is sufficiently far from the right wall
+003BED84  6C00 FAD2               1253      bge BackToGame
+003BED88                          1254      
+003BED88  0480 00000016           1255      sub.l #PlayerWidth,d0
+003BED8E  0480 00000016           1256      sub.l #PlayerWidth,d0
+003BED94  0697 00000016           1257      add.l #PlayerWidth,(sp)
+003BED9A                          1258      
+003BED9A  4FF9 00FFFFDC           1259      lea $00FFFFDC,sp
+003BEDA0  4EB9 003BE838           1260      jsr DrawPlayer
+003BEDA6                          1261      
+003BEDA6                          1262  MoveLeft: ;Moves the player left as long as that is a valid place to be
+003BEDA6  4FF9 00FFFFB8           1263      lea $00FFFFB8,sp
+003BEDAC                          1264      ;Get the leftmost x value of the current position into d0
+003BEDAC  2017                    1265      move.l (sp),d0
+003BEDAE  0480 00000016           1266      sub.l #PlayerWidth,d0
+003BEDB4                          1267      
+003BEDB4  B0BC 00000016           1268      cmp.l #PlayerWidth,d0 ;Makes sure that it is sufficiently far from the left wall
+003BEDBA  6F00 FA9C               1269      ble BackToGame
+003BEDBE                          1270      
+003BEDBE  0497 00000016           1271      sub.l #PlayerWidth,(sp)
+003BEDC4                          1272      
+003BEDC4  4FF9 00FFFFDC           1273      lea $00FFFFDC,sp
+003BEDCA  4EB9 003BE838           1274      jsr DrawPlayer
+003BEDD0                          1275  
+003BEDD0                          1276  
+003BEDD0                          1277  -------------------- end include --------------------
+003BEDD0                          1278      
+003BEDD0                          1279      
+003BEDD0= 50 61 6E 63 61 6B ...   1280  pancakeDropped dc.b 'PancakeDropped.wav',0 ;Loads in loss sound effect
+003BEDE3= 42 61 63 6B 67 72 ...   1281  backgroundMusic dc.b 'BackgroundMusic.wav',0 ;Loads in background music
+003BEDF7= 50 61 6E 63 61 6B ...   1282  pancakeFlip dc.b 'PancakeFlip.wav',0 ;Loads in pancake hit sound effect
+003BEE07= 50 61 6E 63 61 6B ...   1283  pancakeFall dc.b 'PancakeFall.wav',0 ;Load in pancake falling sound effect
+003BEE17                          1284  
+003BEE17                          1285      END    START        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+ADDSCORE            3BE4EC
+ALL_REG             7FFF
+BACKGROUNDMUSIC     3BEDE3
+BACKTOGAME          3BE858
+BITMAP              1000
+CHANGEXMINUS        3BE282
+CHANGEXPLUS         3BE264
+CHECKCAKE           3BEC74
+CONTINUEUPDATECAKE  3BE7F0
+COVERCAKE           3BE808
+CREATEPIXELARRAYVALUES  3BE1A2
+CYCLINGVALUES       3BE412
+DRAWINGTITLE        3BE164
+DRAWPIXEL           3BE21C
+DRAWPLAYER          3BE838
+DRAWREC             57
+DRAWRECTANGLEPANCAKE  3BE860
+DRAWRECTANGLEPLAYER  3BE894
+DRAWTHECAKE         3BE81C
+DRAWTITLE           3BE2BC
+EIGHTPRINT          3BE688
+ENDCYCLE            3BE42A
+EXIT                3BE34C
+FILLCOLOR           51
+FINDSMALLERVALUE    3BECC2
+FINISH              3BE6E8
+FIRSTTIME           3BE154
+FIRSTTIMECHECK      3BE114
+FIVEPRINT           3BE644
+FOURPRINT           3BE630
+GAME                3BE764
+GAMELOOP            3BE5CA
+GETPRINTTABLEINDEX  3BE3F6
+GETRANDOMBYTEINTOD6  3BEA24
+GETRANDOMLONGINTOD6  3BEA5E
+GET_TIME_COMMAND    8
+GODOWN              3BEAC8
+GOUP                3BEB56
+INITIALIZECAKE      3BE706
+INITIALY            3BE1E8
+LARGERD4            3BEC6A
+LEFT                25
+LEFTDOWN            3BEB32
+LEFTUP              3BEBBE
+LOADCOVER           3BE998
+LOADINSOUND         3BE124
+LOSE                3BE0F0
+MOVEDOWN            3BEC02
+MOVELEFT            3BEDA6
+MOVERIGHT           3BED68
+MOVEUP              3BEBE2
+MOVINGLEFT          3BEAA8
+MOVINGRIGHT         3BEAA2
+NINC0               3BEA3A
+NINC1               3BEA42
+NINEPRINT           3BE6A8
+ONEPRINT            3BE5F4
+OUTLINECOLOR        33CED7
+PANCAKECOLOR        5491CE
+PANCAKEDROPPED      3BEDD0
+PANCAKEFALL         3BEE07
+PANCAKEFALLINGSOUND  3BE75C
+PANCAKEFLIP         3BEDF7
+PANCAKEHEIGHT       5
+PANCAKEHIT          3BED0E
+PANCAKEOUTLINE      C94072
+PANCAKEWIDTH        12
+PENCOLOR            50
+PLAYERCOLOR         5A5A5A
+PLAYERHEIGHT        B
+PLAYERWIDTH         16
+PLAYERY             226
+PRINTSCORE          3BE5A6
+PRINTTABLE          3BE6C0
+RANDOMVAL           3BEA9A
+RESETSTACK          3BE35A
+RIGHT               27
+RIGHTDOWN           3BEAFA
+RIGHTUP             3BEB86
+SCOREINITIALIZER    3BE558
+SEEDRANDOMNUMBER    3BEA0C
+SEGMENTA            3BE436
+SEGMENTB            3BE450
+SEGMENTC            3BE46A
+SEGMENTD            3BE484
+SEGMENTE            3BE49E
+SEGMENTF            3BE4B8
+SEGMENTFUNCTIONTABLE  3BE5D8
+SEGMENTG            3BE4D2
+SETCAKEBITMAP       3BE944
+SETPLAYERBITMAP     3BE8DC
+SETRANDOMNUMBER     3BE9C6
+SETVALUES           3BE3D4
+SETWINDOW           3BE170
+SEVENPRINT          3BE678
+SHAREDENDING        3BEC36
+SHAREDMOVEMENT      3BEC22
+SIXPRINT            3BE65C
+SMALLERD4           3BECCA
+START               3BE114
+STARTMAP            1DF878
+STARTOFLED          3BE3AE
+SWITCHTOLEFTDOWN    3BEB26
+SWITCHTOLEFTUP      3BEBB2
+SWITCHTORIGHTDOWN   3BEAEE
+SWITCHTORIGHTUP     3BEB7A
+TEMPRANDOMLONG      3BEA9E
+THREEPRINT          3BE618
+TOUCHINGXS          3BECD2
+TWOPRINT            3BE600
+UPDATECAKE          3BE7C6
+UPDATEPLAYER        3BE792
+UPORDOWN            3BEAB8
+USERINPUT           13
+VALID               3BE51C
+VERTICALDATA        3BEC52
+WAITTOBEGIN         3BE350
+XVELOCITYLEFT       3BECA2
+XVELOCITYRIGHT      3BECB0
+XYCHECKS            3BE206
+ZEROPRINT           3BE5D8
+ZEROVALUE           3BE3E8

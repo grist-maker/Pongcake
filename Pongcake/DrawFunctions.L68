@@ -1,0 +1,206 @@
+003BEF48 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 10/8/2022 1:24:30 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      :
+00000000                             3  * Written by :
+00000000                             4  * Date       :
+00000000                             5  * Description:
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  
+00000000                             8  DrawRectanglePancake:
+Line 9 ERROR: Undefined symbol
+00000000  203C 004DBD16              9      move.l #FillColor, d0
+Line 10 ERROR: Undefined symbol
+00000006  223C 004DBD16             10      move.l #PancakeColor,d1
+0000000C  4E4F                      11      TRAP #15
+0000000E                            12      
+Line 13 ERROR: Undefined symbol
+0000000E  203C 004DBD16             13      move.l #PenColor, d0
+Line 14 ERROR: Undefined symbol
+00000014  223C 004DBD16             14      move.l #PancakeOutline,d1
+0000001A  4E4F                      15      TRAP #15 
+0000001C                            16          
+Line 17 ERROR: Undefined symbol
+0000001C  203C 004DBD16             17      move.l #DrawRec,d0
+00000022  2205                      18      move.l d5,d1
+Line 19 ERROR: Undefined symbol
+00000024  0681 004DBD16             19      add.l #PancakeWidth,d1
+0000002A                            20      
+0000002A  2605                      21      move.l d5,d3
+Line 22 ERROR: Undefined symbol
+0000002C  0483 004DBD16             22      sub.l #PancakeWidth,d3
+00000032                            23      
+00000032  2802                      24      move.l d2,d4
+Line 25 ERROR: Undefined symbol
+00000034  0684 004DBD16             25      add.l #PancakeHeight,d4
+0000003A                            26      
+0000003A  4E4F                      27      TRAP #15
+0000003C                            28      
+0000003C  4FF9 00FFFF10             29      lea $00FFFF10,sp
+00000042  4E75                      30      rts
+00000044                            31      
+00000044                            32  DrawRectanglePlayer:
+00000044  4FF9 00FFFFB8             33      lea $00FFFFB8,sp
+0000004A                            34      
+Line 35 ERROR: Undefined symbol
+0000004A  203C 004DBD16             35      move.l #PenColor,d0
+Line 36 ERROR: Undefined symbol
+00000050  223C 004DBD16             36      move.l #OutlineColor,d1
+00000056  4E4F                      37      TRAP #15
+00000058                            38  
+Line 39 ERROR: Undefined symbol
+00000058  203C 004DBD16             39      move.l #FillColor,d0
+Line 40 ERROR: Undefined symbol
+0000005E  223C 004DBD16             40      move.l #PlayerColor,d1
+00000064  4E4F                      41      TRAP #15
+00000066                            42      
+Line 43 ERROR: Undefined symbol
+00000066  203C 004DBD16             43      move.l #DrawRec,d0
+0000006C  2217                      44      move.l (sp),d1
+Line 45 ERROR: Undefined symbol
+0000006E  0681 004DBD16             45      add.l #PlayerWidth,d1
+00000074                            46      
+Line 47 ERROR: Undefined symbol
+00000074  243C 004DBD16             47      move.l #PlayerY,d2
+0000007A                            48      
+0000007A  2617                      49      move.l (sp),d3
+Line 50 ERROR: Undefined symbol
+0000007C  0483 004DBD16             50      sub.l #PlayerWidth,d3
+00000082                            51      
+Line 52 ERROR: Undefined symbol
+00000082  283C 004DBD16             52      move.l #PlayerY,d4
+Line 53 ERROR: Undefined symbol
+00000088  0684 004DBD16             53      add.l #PlayerHeight,d4
+0000008E  4E4F                      54      TRAP #15
+00000090                            55      
+00000090  06A7 00000000             56      add.l #0,-(sp)
+00000096  06A7 00000000             57      add.l #0,-(sp)
+0000009C  4FF9 00FFFFD8             58      lea $00FFFFD8,sp
+000000A2  4E75                      59      rts
+000000A4                            60      
+000000A4                            61  SetPlayerBitmap:
+000000A4  2E7C 01000000             62      move.l #$01000000,sp ;Goes back to relevant player data section of the stack
+000000AA                            63      
+000000AA  2F00                      64      move.l d0,-(sp) ;Moves leftmost value occupied by player into top left x value for bitmap
+Line 65 ERROR: Undefined symbol
+000000AC  2F3C 004DBD16             65      move.l #PlayerY,-(sp) ;Moves topmost y value of player to top left y value for bitmap
+000000B2                            66      
+Line 67 ERROR: Undefined symbol
+000000B2  2F3C 004DBD16             67      move.l #PlayerWidth,-(sp)
+Line 68 ERROR: Undefined symbol
+000000B8  0697 004DBD16             68      add.l #PlayerWidth,(sp)  ;Sets width of chunk to draw to 2 * player's width 
+000000BE  5297                      69      add.l #1,(sp)
+Line 70 ERROR: Undefined symbol
+000000C0  2F3C 004DBD16             70      move.l #PlayerHeight,-(sp) ;Sets height of chunk to player's height
+000000C6                            71      
+000000C6  2F00                      72      move.l d0,-(sp) ;Sets top left x value on output screen to top left x for bitmap
+Line 73 ERROR: Undefined symbol
+000000C8  2F3C 004DBD16             73      move.l #PlayerY,-(sp) ;Sets top left y value on output screen to top left y for bitmap
+000000CE                            74      
+Line 75 ERROR: Undefined symbol
+000000CE  243C 004DBD16             75      move.l #PlayerHeight,d2 ;Starting y value
+Line 76 ERROR: Undefined symbol
+000000D4  0682 004DBD16             76      add.l #PlayerY,d2
+000000DA                            77      
+000000DA  2600                      78      move.l d0,d3
+000000DC                            79      
+000000DC  283C 000002BB             80      move.l #699,d4
+000000E2  7A01                      81      move.l #1,d5 ;CHANGED FROM 1 TO 0
+000000E4                            82      
+000000E4  2C00                      83      move.l d0,d6
+Line 84 ERROR: Undefined symbol
+000000E6  0686 004DBD16             84      add.l #PlayerWidth,d6
+Line 85 ERROR: Undefined symbol
+000000EC  0686 004DBD16             85      add.l #PlayerWidth,d6
+000000F2  5286                      86      add.l #1,d6
+000000F4                            87      
+Line 88 ERROR: Undefined symbol
+000000F4  2E3C 004DBD16             88      move.l #PlayerHeight,d7
+Line 89 ERROR: Undefined symbol
+000000FA  0687 004DBD16             89      add.l #PlayerY,d7
+00000100                            90      
+00000100  4FF9 00FFFFDC             91      lea $00FFFFDC,sp
+00000106  4EB9 00000170             92      jsr LoadCover
+0000010C                            93      
+0000010C  4FF9 00FFFFE4             94      lea $00FFFFE4,sp
+00000112  4E75                      95      rts
+00000114                            96  
+00000114                            97  SetCakeBitmap:
+00000114  4FF9 00FFFF9C             98      lea $00FFFF9C,sp
+0000011A  264F                      99      move.l sp,A3
+0000011C  2017                     100      move.l (sp),d0
+0000011E                           101  
+Line 102 ERROR: Undefined symbol
+0000011E  0480 004DBD16            102      sub.l #PancakeWidth,d0 ;save leftmost value of pancake 1 to d0
+00000124                           103      
+00000124  2227                     104      move.l -(sp),d1 ;Save bottom height of pancake 1 to d0
+00000126                           105      
+00000126  2E7C 01000000            106      move.l #$01000000,sp ;Goes back to relevant player data section of the stack
+0000012C                           107      
+0000012C  2F00                     108      move.l d0,-(sp) ;Moves leftmost value occupied by player into top left x value for bitmap
+0000012E  2F01                     109      move.l d1,-(sp) ;Moves topmost y value of player to top left y value for bitmap
+00000130                           110      
+Line 111 ERROR: Undefined symbol
+00000130  2F3C 004DBD16            111      move.l #PancakeWidth,-(sp)
+Line 112 ERROR: Undefined symbol
+00000136  0697 004DBD16            112      add.l #PancakeWidth,(sp)  ;Sets width of chunk to draw to 2 * pancake's width 
+0000013C  5297                     113      add.l #1,(sp)
+Line 114 ERROR: Undefined symbol
+0000013E  2F3C 004DBD16            114      move.l #PancakeHeight,-(sp) ;Sets height of chunk to pancake's height
+00000144                           115      
+00000144  2F00                     116      move.l d0,-(sp) ;Sets top left x value on output screen to top left x for bitmap
+00000146  2F01                     117      move.l d1,-(sp) ;Sets top left y value on output screen to top left y for bitmap
+00000148                           118      
+Line 119 ERROR: Undefined symbol
+00000148  2E3C 004DBD16            119      move.l #PancakeHeight,d7
+0000014E                           120      
+0000014E  DE82                     121      add.l d2,d7
+00000150                           122      
+Line 123 ERROR: Undefined symbol
+00000150  0682 004DBD16            123      add.l #PancakeHeight,d2 ;Starting y value
+00000156                           124      
+00000156  2600                     125      move.l d0,d3
+00000158                           126      
+00000158  283C 000002BB            127      move.l #699,d4
+0000015E  7A01                     128      move.l #1,d5
+00000160                           129      
+00000160  2C00                     130      move.l d0,d6
+Line 131 ERROR: Undefined symbol
+00000162  0686 004DBD16            131      add.l #PancakeWidth,d6
+Line 132 ERROR: Undefined symbol
+00000168  0686 004DBD16            132      add.l #PancakeWidth,d6
+0000016E  5286                     133      add.l #1,d6
+00000170                           134  
+00000170                           135  LoadCover:
+00000170  2E7C 00FFFF24            136      move.l #$00FFFF24,sp
+Line 137 ERROR: Undefined symbol
+00000176  41F9 004DBD16            137      lea bitmap,a0    ;load the address of the bitmap into a0
+0000017C                           138      
+0000017C  3008                     139      move.w a0, d0 ;Creates placeholder for pixel array address in d0
+0000017E  0658 0000                140      add.w #0, (a0)+ ;skips through header to parse information
+00000182  0698 00000000            141      add.l #0, (a0)+
+00000188  0698 00000000            142      add.l #0, (a0)+
+0000018E  D010                     143      add.b (a0),d0   ;saves pointer to pixel data to d0
+00000190                           144          
+00000190  2040                     145      move.l d0,a0
+00000192                           146  
+Line 147 ERROR: Undefined symbol
+00000192  4EB9 004DBD16            147      jsr XYChecks
+00000198  4FF9 00FFFFD8            148      lea $00FFFFD8,sp
+0000019E  4E75                     149      rts
+Line 150 WARNING: END directive missing, starting address not set
+
+39 errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+DRAWRECTANGLEPANCAKE  0
+DRAWRECTANGLEPLAYER  44
+LOADCOVER           170
+SETCAKEBITMAP       114
+SETPLAYERBITMAP     A4
